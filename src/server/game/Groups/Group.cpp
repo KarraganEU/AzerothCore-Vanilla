@@ -18,6 +18,7 @@
 #include "Group.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "bot_ai.h"
 #include "Config.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"
@@ -2025,6 +2026,17 @@ void Group::BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRai
 
         if (group == -1 || itr->getSubGroup() == group)
             player->GetSession()->SendPacket(packet);
+    }
+}
+
+void Group::BroadcastToBots(std::string msg)
+{
+    for (GroupBotReference* itr = GetFirstBotMember(); itr != nullptr; itr = itr->next())
+    {
+        Creature const* bot = itr->GetSource();
+        if (!bot)
+            continue;
+        bot->GetBotAI()->handlePartyMessage(msg);
     }
 }
 

@@ -284,6 +284,7 @@ public:
     void UpdatePlayerOutOfRange(Player* player);
     // ignore: GUID of player that will be ignored
     void BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRaid, int group = -1, ObjectGuid ignore = ObjectGuid::Empty);
+    void BroadcastToBots(std::string msg);
     void BroadcastReadyCheck(WorldPacket const* packet);
     void OfflineReadyCheck();
 

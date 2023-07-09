@@ -91,6 +91,8 @@ class bot_ai : public CreatureAI
 
         static const std::string& LocalizedNpcText(Player const* forPlayer, uint32 textId);
 
+        void handlePartyMessage(std::string);
+
         bool OnGossipHello(Player* player, uint32 option);
         bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action);
         bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, char const* code);
@@ -506,6 +508,7 @@ class bot_ai : public CreatureAI
         void BotSay(const std::string &text, Player const* target = nullptr) const;
         void BotWhisper(const std::string &text, Player const* target = nullptr) const;
         void BotYell(const std::string &text, Player const* target = nullptr) const;
+        void BotTellParty(const std::string &text, Player const* target = nullptr) const;
         void BotSay(std::string&& text, Player const* target = nullptr) const;
         void BotWhisper(std::string&& text, Player const* target = nullptr) const;
         void BotYell(std::string&& text, Player const* target = nullptr) const;
@@ -635,6 +638,7 @@ class bot_ai : public CreatureAI
         //utilities
         void _AddItemTemplateLink(Player const* forPlayer, ItemTemplate const* item, std::ostringstream &str) const;
         void _AddItemLink(Player const* forPlayer, Item const* item, std::ostringstream &str, bool addIcon = true) const;
+        void _AddItemLink(Player const* forPlayer, ItemTemplate const* proto, std::ostringstream& str, bool addIcon) const;
         void _AddQuestLink(Player const* forPlayer, Quest const* quest, std::ostringstream &str) const;
         void _AddWeaponSkillLink(Player const* forPlayer, SpellInfo const* spellInfo, std::ostringstream &str, uint32 skillid) const;
         void _AddSpellLink(Player const* forPlayer, SpellInfo const* spellInfo, std::ostringstream &str, bool color = true) const;

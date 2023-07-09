@@ -380,6 +380,22 @@ void bot_ai::BotYell(const std::string &text, Player const* /*target*/) const
 
     me->Yell(text, LANG_UNIVERSAL);
 }
+
+//TODO non-party members also receive message (not particularly important for Singleplayer)
+void bot_ai::BotTellParty(const std::string& text, Player const* target) const
+{
+    WorldPacket data;
+    ChatHandler::BuildChatPacket(data, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, me, nullptr, text);
+    me->GetBotGroup()->BroadcastPacket(&data, false, 0, me->GetGUID());
+    //group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
+    //if (!target && master->GetTypeId() == TYPEID_PLAYER)
+    //    target = master;
+    //if (!target)
+    //    return;
+    //
+    //me->Talk(text, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, 100.f, target);
+}
+
 void bot_ai::BotSay(std::string&& text, Player const* target) const
 {
     if (!target && master->GetTypeId() == TYPEID_PLAYER)
@@ -7382,6 +7398,85 @@ float bot_ai::CalcSpellMaxRange(uint32 spellId, bool enemy) const
 //GOSSIP//
 //////////
 //GossipHello
+
+void bot_ai::handlePartyMessage(std::string msg)
+{
+    ItemTemplate const* proto;
+
+    //Check for Linked Item
+    std::string token = "Hitem:";
+    std::string link = msg;
+    std::size_t pos = link.find(token);
+    if (pos != std::string::npos) {
+        link = link.substr(pos + token.length());
+        pos = link.find(":");
+        link = link.substr(0, pos);
+        proto = sObjectMgr->GetItemTemplate(std::stoi(link));
+    }
+
+    //check for need
+    if (proto) {
+        // = 0.0f;
+        float score=_getItemGearStatScore(proto, 3, nullptr); // improve calculation for "better item"
+        float oldScore = 0.0f;
+
+        ItemTemplate const* oldProto = nullptr;
+
+        uint32 count = 0;
+        for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
+        {
+            if (_equips[i])
+            {
+                if (proto->InventoryType == _equips[i]->GetTemplate()->InventoryType)
+                {
+                    ++count;
+                    oldProto = _equips[i]->GetTemplate();
+                    oldScore = _getItemGearStatScore(oldProto, count, nullptr);
+                }
+            }
+        }
+
+        if (!oldProto || (score * 0.85 > oldScore)) {
+            std::ostringstream msgScore;
+            msgScore << "I could use this! GS: " << uint32(score);
+            BotWhisper(msgScore.str(), master);
+
+            if(oldProto){
+                std::ostringstream msgOldItem;
+                msgOldItem << "Old Item: ";
+                _AddItemTemplateLink(master, oldProto, msgOldItem/*, false*/);
+                BotWhisper(msgOldItem.str(), master);
+
+                std::ostringstream msgOldScore;
+                msgOldScore << "Old GS: " << uint32(oldScore);
+                BotWhisper(msgOldScore.str(), master);
+            }
+        }
+    }
+
+    if (msg.find("listeq") != std::string::npos) {
+        EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
+        ASSERT(einfo, "Trying to send equipment list for bot with no equip info!");
+
+        for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
+        {
+            Item const* item = _equips[i];
+            if (!item) continue;
+            std::ostringstream msg;
+            _AddItemLink(master, item, msg/*, false*/);
+            //uncomment if needed
+            //msg << " in slot " << uint32(i) << " (" << _getNameForSlot(i + 1) << ')';
+            if (i <= BOT_SLOT_RANGED && einfo->ItemEntry[i] == item->GetEntry())
+                msg << " |cffe6cc80|h[!" << LocalizedNpcText(master, BOT_TEXT_VISUALONLY) << "!]|h|r";
+            BotWhisper(msg.str(), master);
+        }
+
+        std::ostringstream msg2;
+        msg2 << "GS: " << uint32(GetBotGearScores().first);
+        BotWhisper(msg2.str(), master);
+    }
+}
+
 bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
 {
     if (!BotMgr::IsNpcBotModEnabled() || !BotMgr::IsClassEnabled(_botclass) ||
