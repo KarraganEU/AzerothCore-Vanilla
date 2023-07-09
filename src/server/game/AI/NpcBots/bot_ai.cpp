@@ -7414,42 +7414,55 @@ void bot_ai::handlePartyMessage(std::string msg)
         proto = sObjectMgr->GetItemTemplate(std::stoi(link));
     }
 
-    //check for need
+    //check for need    
     if (proto) {
-        // = 0.0f;
-        float score=_getItemGearStatScore(proto, 3, nullptr); // improve calculation for "better item"
-        float oldScore = 0.0f;
 
-        ItemTemplate const* oldProto = nullptr;
-
-        uint32 count = 0;
-        for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
+        bool canEquip = false;
+        //this should really be a helper function
+        for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
         {
-            if (_equips[i])
+            if (_canEquip(proto, k, false))
             {
-                if (proto->InventoryType == _equips[i]->GetTemplate()->InventoryType)
-                {
-                    ++count;
-                    oldProto = _equips[i]->GetTemplate();
-                    oldScore = _getItemGearStatScore(oldProto, count, nullptr);
-                }
+                canEquip = true;
+                break;
             }
         }
 
-        if (!oldProto || (score * 0.85 > oldScore)) {
-            std::ostringstream msgScore;
-            msgScore << "I could use this! GS: " << uint32(score);
-            BotWhisper(msgScore.str(), master);
+        if (canEquip) {
+            float score = _getItemGearStatScore(proto, 3, nullptr); // improve calculation for "better item"
+            float oldScore = 0.0f;
 
-            if(oldProto){
-                std::ostringstream msgOldItem;
-                msgOldItem << "Old Item: ";
-                _AddItemTemplateLink(master, oldProto, msgOldItem/*, false*/);
-                BotWhisper(msgOldItem.str(), master);
+            ItemTemplate const* oldProto = nullptr;
 
-                std::ostringstream msgOldScore;
-                msgOldScore << "Old GS: " << uint32(oldScore);
-                BotWhisper(msgOldScore.str(), master);
+            uint32 count = 0;
+            for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
+            {
+                if (_equips[i])
+                {
+                    if (proto->InventoryType == _equips[i]->GetTemplate()->InventoryType)
+                    {
+                        ++count;
+                        oldProto = _equips[i]->GetTemplate();
+                        oldScore = _getItemGearStatScore(oldProto, count, nullptr);
+                    }
+                }
+            }
+
+            if (!oldProto || (score * 0.85 > oldScore)) {
+                std::ostringstream msgScore;
+                msgScore << "I could use this! GS: " << uint32(score);
+                BotWhisper(msgScore.str(), master);
+
+                if (oldProto) {
+                    std::ostringstream msgOldItem;
+                    msgOldItem << "Old Item: ";
+                    _AddItemTemplateLink(master, oldProto, msgOldItem/*, false*/);
+                    BotWhisper(msgOldItem.str(), master);
+
+                    std::ostringstream msgOldScore;
+                    msgOldScore << "Old GS: " << uint32(oldScore);
+                    BotWhisper(msgOldScore.str(), master);
+                }
             }
         }
     }
