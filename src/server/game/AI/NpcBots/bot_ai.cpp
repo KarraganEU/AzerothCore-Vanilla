@@ -42,6 +42,7 @@
 #include "TemporarySummon.h"
 #include "Transport.h"
 #include "World.h"
+#include <BotSpecGearMgr.h>
 /*
 NpcBot System by Trickerer (https://github.com/trickerer/Trinity-Bots; onlysuffering@gmail.com)
 Version 5.2.77a
@@ -381,19 +382,11 @@ void bot_ai::BotYell(const std::string &text, Player const* /*target*/) const
     me->Yell(text, LANG_UNIVERSAL);
 }
 
-//TODO non-party members also receive message (not particularly important for Singleplayer)
 void bot_ai::BotTellParty(const std::string& text, Player const* target) const
 {
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, me, nullptr, text);
     me->GetBotGroup()->BroadcastPacket(&data, false, 0, me->GetGUID());
-    //group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
-    //if (!target && master->GetTypeId() == TYPEID_PLAYER)
-    //    target = master;
-    //if (!target)
-    //    return;
-    //
-    //me->Talk(text, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, 100.f, target);
 }
 
 void bot_ai::BotSay(std::string&& text, Player const* target) const
@@ -7394,45 +7387,51 @@ float bot_ai::CalcSpellMaxRange(uint32 spellId, bool enemy) const
     ApplyClassSpellRangeMods(spellInfo, maxRange);
     return maxRange;
 }
-//////////
-//GOSSIP//
-//////////
-//GossipHello
 
-void bot_ai::handlePartyMessage(std::string msg)
-{
-    ItemTemplate const* proto;
+//BOTCHAT
+//TEMP
+//TODO Seperate Handler-Classes
 
+//Checks if the bot can equip the given Item(template) in ANY Slot
+bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreIlvlDisparity=true) {
+    for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
+    {
+        if (_canEquip(item, k, ignoreIlvlDisparity))
+        {
+            return true;
+        }
+    }
+    return false;
+    //TODO we could also return a pair <bool, int> where the int is the slot? 
+}
+
+ItemTemplate const* bot_ai::GetTemplateFromChatLink(std::string message) {
     //Check for Linked Item
-    std::string token = "Hitem:";
-    std::string link = msg;
+    //Item links have this kind of format: "\124cff0070dd\124Hitem:13042::::::::80:::::\124h[Sword of the Magistrate]\124h\124r", where the first block signifies color, and the part after 'Hitem:' is the itemID    
+    std::string token = "|Hitem:"; //TODO may not work with |
+    std::string link = message;
     std::size_t pos = link.find(token);
     if (pos != std::string::npos) {
         link = link.substr(pos + token.length());
         pos = link.find(":");
         link = link.substr(0, pos);
-        proto = sObjectMgr->GetItemTemplate(std::stoi(link));
+        return sObjectMgr->GetItemTemplate(std::stoi(link));
     }
+    return nullptr;
+}
 
-    //check for need    
+void bot_ai::handlePartyMessage(std::string msg)
+{
+    
+    BotSpecGearMgr::parseResult parseResult = sBotSpecGearMgr->parseItemLink(msg);
+    ItemTemplate const* proto = parseResult.proto;
     if (proto) {
-
-        bool canEquip = false;
-        //this should really be a helper function
-        for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
-        {
-            if (_canEquip(proto, k, false))
-            {
-                canEquip = true;
-                break;
-            }
-        }
-
-        if (canEquip) {
-            float score = _getItemGearStatScore(proto, 3, nullptr); // improve calculation for "better item"
+        if (CanEquipItem(proto)) {
+            float score = _getItemGearStatScore(proto, 3, nullptr); // This needs a complete rewrite, since this function does not consider "enchants" like increased spell power on itemTemplates, which is the only thing we have
             float oldScore = 0.0f;
 
             ItemTemplate const* oldProto = nullptr;
+            sBotSpecGearMgr->getItemSpecScore(proto, 0, 0);
 
             uint32 count = 0;
             for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
@@ -7443,29 +7442,19 @@ void bot_ai::handlePartyMessage(std::string msg)
                     {
                         ++count;
                         oldProto = _equips[i]->GetTemplate();
-                        oldScore = _getItemGearStatScore(oldProto, count, nullptr);
+                        oldScore = _getItemGearStatScore(oldProto, count, nullptr); //This should consider only relevant stats, but seems to tack on another bonus for itemquality which isn't particularly useful                        
                     }
                 }
             }
 
             if (!oldProto || (score * 0.85 > oldScore)) {
-                std::ostringstream msgScore;
-                msgScore << "I could use this! GS: " << uint32(score);
-                BotWhisper(msgScore.str(), master);
-
-                if (oldProto) {
-                    std::ostringstream msgOldItem;
-                    msgOldItem << "Old Item: ";
-                    _AddItemTemplateLink(master, oldProto, msgOldItem/*, false*/);
-                    BotWhisper(msgOldItem.str(), master);
-
-                    std::ostringstream msgOldScore;
-                    msgOldScore << "Old GS: " << uint32(oldScore);
-                    BotWhisper(msgOldScore.str(), master);
-                }
+                AnnounceNeed(oldScore, score, oldProto);
             }
         }
     }
+
+    //TEST
+    std::map<uint32, float> furyMap = sBotSpecGearMgr->getStatWeights(BOT_SPEC_WARRIOR_FURY);
 
     if (msg.find("listeq") != std::string::npos) {
         EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
@@ -7475,20 +7464,42 @@ void bot_ai::handlePartyMessage(std::string msg)
         {
             Item const* item = _equips[i];
             if (!item) continue;
-            std::ostringstream msg;
-            _AddItemLink(master, item, msg/*, false*/);
+            std::ostringstream equipMessage;
+            _AddItemLink(master, item, equipMessage/*, false*/);
             //uncomment if needed
             //msg << " in slot " << uint32(i) << " (" << _getNameForSlot(i + 1) << ')';
             if (i <= BOT_SLOT_RANGED && einfo->ItemEntry[i] == item->GetEntry())
-                msg << " |cffe6cc80|h[!" << LocalizedNpcText(master, BOT_TEXT_VISUALONLY) << "!]|h|r";
-            BotWhisper(msg.str(), master);
+                equipMessage << " |cffe6cc80|h[!" << LocalizedNpcText(master, BOT_TEXT_VISUALONLY) << "!]|h|r";
+            BotWhisper(equipMessage.str(), master);
         }
 
-        std::ostringstream msg2;
-        msg2 << "GS: " << uint32(GetBotGearScores().first);
-        BotWhisper(msg2.str(), master);
+        std::ostringstream gsMessage;
+        gsMessage << "GS: " << uint32(GetBotGearScores().first);
+        BotWhisper(gsMessage.str(), master);
     }
 }
+
+void bot_ai::AnnounceNeed(float oldItemScore, float newItemScore, ItemTemplate const* oldProto) {
+    std::ostringstream msgNewScore;
+    msgNewScore << "I could use this! GS: " << uint32(newItemScore);
+    BotWhisper(msgNewScore.str(), master);
+
+    if (oldProto) {
+        std::ostringstream msgOldItem;
+        msgOldItem << "Old Item: ";
+        _AddItemTemplateLink(master, oldProto, msgOldItem/*, false*/);
+        BotWhisper(msgOldItem.str(), master);
+
+        std::ostringstream msgOldScore;
+        msgOldScore << "Old GS: " << uint32(oldItemScore);
+        BotWhisper(msgOldScore.str(), master);
+    }
+}
+
+//////////
+//GOSSIP//
+//////////
+//GossipHello
 
 bool bot_ai::OnGossipHello(Player* player, uint32 /*option*/)
 {
@@ -13324,6 +13335,10 @@ float bot_ai::_getStatScore(uint8 stat) const
     float tankMod = IsTank() ? fone : fzero;
     float healMod = HasRole(BOT_ROLE_HEAL) ? fone : fzero;
     float castMod = IsCastingClass(_botclass) ? fone : fzero;
+
+    //dps/tank paladins probably shouldn't benefit fully from spellpower
+    castMod = _botclass == BOT_CLASS_PALADIN && (_spec == BOT_SPEC_PALADIN_PROTECTION || _spec == BOT_SPEC_PALADIN_RETRIBUTION) ? 0.15f : castMod;
+
     float spiritMod = (_botclass == BOT_CLASS_PRIEST || _botclass == BOT_CLASS_MAGE || _botclass == BOT_CLASS_WARLOCK || (_botclass == BOT_CLASS_DRUID && _spec != BOT_SPEC_DRUID_FERAL)) ? fone : fzero;
     float dpsMod = HasRole(BOT_ROLE_DPS) ? fone : fzero;
     float meleeMod = !HasRole(BOT_ROLE_RANGED) ? fone : fzero;
@@ -13365,11 +13380,11 @@ float bot_ai::_getStatScore(uint8 stat) const
         case BOT_STAT_MOD_CRIT_TAKEN_SPELL_RATING:
             return 0.4f * tankMod;
         case BOT_STAT_MOD_ARMOR:
-            return 0.05f * tankMod;
+            return IsTank() ? 0.05f : 0.01f;
         case BOT_STAT_MOD_HIT_MELEE_RATING:
         case BOT_STAT_MOD_HIT_RANGED_RATING:
         case BOT_STAT_MOD_HIT_SPELL_RATING:
-            return 1.0f * dpsMod;
+            return 1.0f * dpsMod * castMod;
         case BOT_STAT_MOD_CRIT_MELEE_RATING:
         case BOT_STAT_MOD_CRIT_RANGED_RATING:
         case BOT_STAT_MOD_CRIT_SPELL_RATING:
