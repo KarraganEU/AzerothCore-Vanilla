@@ -347,9 +347,7 @@ class bot_ai : public CreatureAI
 
         //BOTCHAT
         bool CanEquipItem(ItemTemplate const* item, bool ignoreLevelRequirement);
-        ItemTemplate const* GetTemplateFromChatLink(std::string message);
         void handlePartyMessage(std::string);
-
         void AnnounceNeed(float oldItemScore, float newItemScore, ItemTemplate const* oldProto);
 
     protected:

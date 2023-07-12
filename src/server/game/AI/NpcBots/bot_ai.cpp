@@ -7405,46 +7405,32 @@ bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreIlvlDisparity=tru
     //TODO we could also return a pair <bool, int> where the int is the slot? 
 }
 
-ItemTemplate const* bot_ai::GetTemplateFromChatLink(std::string message) {
-    //Check for Linked Item
-    //Item links have this kind of format: "\124cff0070dd\124Hitem:13042::::::::80:::::\124h[Sword of the Magistrate]\124h\124r", where the first block signifies color, and the part after 'Hitem:' is the itemID    
-    std::string token = "|Hitem:"; //TODO may not work with |
-    std::string link = message;
-    std::size_t pos = link.find(token);
-    if (pos != std::string::npos) {
-        link = link.substr(pos + token.length());
-        pos = link.find(":");
-        link = link.substr(0, pos);
-        return sObjectMgr->GetItemTemplate(std::stoi(link));
-    }
-    return nullptr;
-}
-
 void bot_ai::handlePartyMessage(std::string msg)
 {
     
     BotSpecGearMgr::parseResult parseResult = sBotSpecGearMgr->parseItemLink(msg);
     ItemTemplate const* proto = parseResult.proto;
     if (proto) {
-        if (CanEquipItem(proto)) {
-            float score = _getItemGearStatScore(proto, 3, nullptr); // This needs a complete rewrite, since this function does not consider "enchants" like increased spell power on itemTemplates, which is the only thing we have
+        if (CanEquipItem(proto)) { //THIS IGNORES OFFHANDS, if the equipped mainhand is 2h
             float oldScore = 0.0f;
 
             ItemTemplate const* oldProto = nullptr;
-            sBotSpecGearMgr->getItemSpecScore(proto, 0, 0);
+            uint32 spec = (_botclass == BOT_CLASS_DRUID) && (GetSpec() == BOT_SPEC_DRUID_FERAL) ? (IsTank() ? BOT_SPEC_DRUID_FERAL_BEAR : BOT_SPEC_DRUID_FERAL_CAT) : GetSpec();
+            float score = sBotSpecGearMgr->getItemSpecScore(proto, parseResult.suffixId, parseResult.suffixFactor, spec, me->GetLevel());
 
             uint32 count = 0;
             for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
             {
-                if (_equips[i])
+                if (!_equips[i]) continue;
+                
+                if (proto->InventoryType == _equips[i]->GetTemplate()->InventoryType)
                 {
-                    if (proto->InventoryType == _equips[i]->GetTemplate()->InventoryType)
-                    {
-                        ++count;
-                        oldProto = _equips[i]->GetTemplate();
-                        oldScore = _getItemGearStatScore(oldProto, count, nullptr); //This should consider only relevant stats, but seems to tack on another bonus for itemquality which isn't particularly useful                        
-                    }
-                }
+                    ++count;
+                    oldProto = _equips[i]->GetTemplate();
+                    uint32 oldFactor = _equips[i]->GetItemSuffixFactor();
+                    uint32 oldSufId = _equips[i]->GetItemRandomPropertyId();
+                    oldScore = sBotSpecGearMgr->getItemSpecScore(oldProto, oldSufId, oldFactor, spec, me->GetLevel());                                    
+                }                
             }
 
             if (!oldProto || (score * 0.85 > oldScore)) {
@@ -7453,9 +7439,7 @@ void bot_ai::handlePartyMessage(std::string msg)
         }
     }
 
-    //TEST
-    std::map<uint32, float> furyMap = sBotSpecGearMgr->getStatWeights(BOT_SPEC_WARRIOR_FURY);
-
+    //Alias for "Show Inventory" Gossip Option
     if (msg.find("listeq") != std::string::npos) {
         EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
         ASSERT(einfo, "Trying to send equipment list for bot with no equip info!");
