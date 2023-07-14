@@ -254,6 +254,25 @@ void BotSpecGearMgr::addItemSuffixStats(uint32 suffixId, uint32 suffixFactor, It
     }
 }
 
+void BotSpecGearMgr::addSocketStats(ItemTemplate const* item, ItemStats istats) {
+    for (int i = 0; i < MAX_ITEM_PROTO_SOCKETS; ++i) {
+        switch (item->Socket[i].Color) {
+            case SOCKET_COLOR_BLUE:
+                istats[BOT_SPEC_STAT_MOD_BSOCKET] += 1;
+                break;
+            case SOCKET_COLOR_YELLOW:
+                istats[BOT_SPEC_STAT_MOD_YSOCKET] += 1;
+                break;
+            case SOCKET_COLOR_RED:
+                istats[BOT_SPEC_STAT_MOD_RSOCKET] += 1;
+                break;
+            case SOCKET_COLOR_META:
+                istats[BOT_SPEC_STAT_MOD_BSOCKET] += 1;
+                break;
+        }
+    }
+}
+
 BotSpecGearMgr* BotSpecGearMgr::instance()
 {
     static BotSpecGearMgr instance;
@@ -301,7 +320,7 @@ float BotSpecGearMgr::getItemSpecScore(ItemTemplate const* item, uint32 suffixid
 {
     if (!item)
         return 0.0f;        
-
+    
     //BuildStatList
     ItemStats stats{};
     addRawItemStats(item, stats, botLevel);

@@ -50,6 +50,7 @@ class BotSpecGearMgr
         void addRawItemStats(ItemTemplate const* item, ItemStats istats, uint32 botLevel);
         void addSpellStatEffects(const ItemTemplate* item, ItemStats istats);
         void addItemSuffixStats(uint32 suffixId, uint32 sufficFactor, ItemStats istats);
+        void addSocketStats(ItemTemplate const* item, ItemStats istats);
 };
 
 #define sBotSpecGearMgr BotSpecGearMgr::instance()
