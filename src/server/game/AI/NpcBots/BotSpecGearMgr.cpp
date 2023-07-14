@@ -215,6 +215,9 @@ void BotSpecGearMgr::addSpellStatEffects(const ItemTemplate* item, ItemStats ist
                 if (spell->EffectApplyAuraName[j] == 124) { //124 -> mod RAP
                     istats[BOT_STAT_MOD_RANGED_ATTACK_POWER] += spell->EffectBasePoints[j] + 1;
                 }
+                if (spell->EffectApplyAuraName[j] == 85) { //85 -> mod mp5
+                    istats[BOT_STAT_MOD_MANA_REGENERATION] += spell->EffectBasePoints[j] + 1;
+                }
             }
         }
 
@@ -288,9 +291,17 @@ BotSpecGearMgr::parseResult BotSpecGearMgr::parseItemLink(std::string message)
     }
     return res;
 }
+float BotSpecGearMgr::getItemSpecScore(Item const* item, uint32 spec, uint32 botLevel) {
+    if (!item)
+        return 0.0f;
+    return getItemSpecScore(item->GetTemplate(), item->GetItemRandomPropertyId(), item->GetItemSuffixFactor(), spec, botLevel);
+}
 
 float BotSpecGearMgr::getItemSpecScore(ItemTemplate const* item, uint32 suffixid, uint32 suffixFactor, uint32 spec, uint32 botLevel)
 {
+    if (!item)
+        return 0.0f;        
+
     //BuildStatList
     ItemStats stats{};
     addRawItemStats(item, stats, botLevel);

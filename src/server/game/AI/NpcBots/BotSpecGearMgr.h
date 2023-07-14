@@ -19,7 +19,7 @@ enum BotSpecMods : uint8 {
     BOT_SPEC_STAT_MOD_WEP_SPEED,
 
     //identical idx as last mod
-    BOT_SPEC_STAT_END = BOT_SPEC_STAT_MOD_RSOCKET,
+    BOT_SPEC_STAT_END = BOT_SPEC_STAT_MOD_WEP_SPEED,
 };
 
 enum BotMultiSpec : uint8 {
@@ -31,6 +31,7 @@ class BotSpecGearMgr
 {
 	public:
 		float getItemSpecScore(ItemTemplate const* item, uint32 suffixId, uint32 suffixFactor, uint32 spec, uint32 level);
+        float getItemSpecScore(Item const* item, uint32 spec, uint32 botLevel);
 		std::map<uint32, float> getStatWeights(uint8 spec);
 		static BotSpecGearMgr* instance();
         //typedef std::pair<ItemTemplate const*, std::pair<uint32, uint32>> parsedItemLink;

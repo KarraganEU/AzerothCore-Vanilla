@@ -346,9 +346,11 @@ class bot_ai : public CreatureAI
         static bool IsFlagCarrier(Unit const* unit, BattlegroundTypeId bgTypeId = BATTLEGROUND_TYPE_NONE);
 
         //BOTCHAT
-        bool CanEquipItem(ItemTemplate const* item, bool ignoreLevelRequirement);
+        bool CanEquipItem(ItemTemplate const* item,bool ignoreEquippedMainhand, bool ignoreLevelRequirement);
         void handlePartyMessage(std::string);
-        void AnnounceNeed(float oldItemScore, float newItemScore, ItemTemplate const* oldProto);
+        std::vector<std::pair<float, Item const*>> getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec);
+        std::vector<uint8> getEquippableSlots(ItemTemplate const* item);
+        void AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems);
 
     protected:
         explicit bot_ai(Creature* creature);
@@ -617,10 +619,10 @@ class bot_ai : public CreatureAI
         void _autoLootCreatureItems(Player* receiver, Creature* creature, uint32 lootQualityMask, uint32 lootThreshold) const;
         void _autoLootCreature(Creature* creature);
 
-        bool _canUseOffHand() const;
+        bool _canUseOffHand(bool ignoreEquippedMH=false) const;
         bool _canUseRanged() const;
         bool _canUseRelic() const;
-        bool _canEquip(ItemTemplate const* newProto, uint8 slot, bool ignoreItemLevel, Item const* newItem = nullptr) const;
+        bool _canEquip(ItemTemplate const* newProto, uint8 slot, bool ignoreItemLevel, Item const* newItem = nullptr, bool ignoreEquippedMainhand = false) const;
         bool _unequip(uint8 slot, ObjectGuid receiver);
         bool _equip(uint8 slot, Item* newItem, ObjectGuid receiver);
         bool _resetEquipment(uint8 slot, ObjectGuid receiver);
