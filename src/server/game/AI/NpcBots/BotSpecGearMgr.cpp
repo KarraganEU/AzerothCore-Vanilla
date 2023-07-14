@@ -232,9 +232,15 @@ void BotSpecGearMgr::addItemSuffixStats(uint32 suffixId, uint32 suffixFactor, It
         return;
 
     ItemRandomSuffixEntry const* suffix = sItemRandomSuffixStore.LookupEntry(suffixId);
+    ItemRandomPropertiesEntry const* randomProp = sItemRandomPropertiesStore.LookupEntry(suffixId);    
+
+    if (!suffix && !randomProp)
+        return;
+
     for (int k = 0; k < MAX_ITEM_ENCHANTMENT_EFFECTS; ++k)
     {
-        uint32 enchantId = suffix->Enchantment[k];
+        uint32 enchantId = suffix ? suffix->Enchantment[k] : randomProp->Enchantment[k];
+
         SpellItemEnchantmentEntry const* pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchantId);
         if (pEnchant)
         {
@@ -249,6 +255,37 @@ void BotSpecGearMgr::addItemSuffixStats(uint32 suffixId, uint32 suffixFactor, It
                     }
                     istats[enchant_spell_id] += enchant_amount;
                 }
+                //Deal with wrath props + school damage
+                else if (enchant_display_type == ITEM_ENCHANTMENT_TYPE_EQUIP_SPELL) {
+                    SpellEntry const* spell = sSpellStore.LookupEntry(enchant_spell_id);
+                    for (uint8 j = 0; j < MAX_SPELL_EFFECTS; j++) {
+                        if (spell->EffectApplyAuraName[j] == 13) { // 13 -> Spell applies Aura that modifies spell power
+                            //School = 2^index
+                            SPELL_SCHOOL_SHADOW;
+                            uint8 school = spell->EffectMiscValue[j];
+                            uint8 modPoints = spell->EffectBasePoints[j] + 1;
+
+                            switch (school) {
+                                case SPELL_SCHOOL_MASK_ARCANE:
+                                    istats[BOT_SPEC_STAT_MOD_ARCANE_SP] += modPoints;
+                                    break;
+                                case SPELL_SCHOOL_MASK_FIRE:
+                                    istats[BOT_SPEC_STAT_MOD_FIRE_SP] += modPoints;
+                                    break;
+                                case SPELL_SCHOOL_MASK_FROST:
+                                    istats[BOT_SPEC_STAT_MOD_FROST_SP] += modPoints;
+                                    break;
+                                case SPELL_SCHOOL_MASK_NATURE:
+                                    istats[BOT_SPEC_STAT_MOD_NATURE_SP] += modPoints;
+                                    break;
+                                case SPELL_SCHOOL_MASK_SHADOW:
+                                    istats[BOT_SPEC_STAT_MOD_SHADOW_SP] += modPoints;
+                                    break;
+                            }                            
+                        } 
+                    }
+                }
+                //TODO check non stat effects
             }
         }
     }
@@ -279,12 +316,13 @@ BotSpecGearMgr* BotSpecGearMgr::instance()
     return &instance;
 }
 
-BotSpecGearMgr::parseResult BotSpecGearMgr::parseItemLink(std::string message)
+BotSpecGearMgr::parseResult BotSpecGearMgr::parseItemLink(const std::string& message)
 {
     //Check for Linked Item
     //Item links have this kind of format: "\124cff0070dd\124Hitem:13042::::::::80:::::\124h[Sword of the Magistrate]\124h\124r", where the first block signifies color, and the part after 'Hitem:' is the itemID    
     std::string token = "|Hitem:";
     std::string link = message;
+    
     std::size_t pos = link.find(token);
     parseResult res;
     if (pos != std::string::npos) {
@@ -326,7 +364,7 @@ float BotSpecGearMgr::getItemSpecScore(ItemTemplate const* item, uint32 suffixid
     addRawItemStats(item, stats, botLevel);
     addItemSuffixStats(suffixid, suffixFactor, stats);
     addSpellStatEffects(item, stats);
-    //TODO add SocketData
+    addSocketStats(item, stats);
 
     //calc ItemScore with Weights
     float itemScore = 0.0f;

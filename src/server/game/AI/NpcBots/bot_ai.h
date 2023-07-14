@@ -347,7 +347,7 @@ class bot_ai : public CreatureAI
 
         //BOTCHAT
         bool CanEquipItem(ItemTemplate const* item,bool ignoreEquippedMainhand, bool ignoreLevelRequirement);
-        void handlePartyMessage(std::string);
+        void handlePartyMessage(const std::string& );
         std::vector<std::pair<float, Item const*>> getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec);
         std::vector<uint8> getEquippableSlots(ItemTemplate const* item);
         void AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems);

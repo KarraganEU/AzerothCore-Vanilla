@@ -2029,7 +2029,7 @@ void Group::BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRai
     }
 }
 
-void Group::BroadcastToBots(std::string msg)
+void Group::BroadcastToBots(const std::string& msg)
 {
     for (GroupBotReference* itr = GetFirstBotMember(); itr != nullptr; itr = itr->next())
     {

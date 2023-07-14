@@ -7405,7 +7405,7 @@ bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreEquippedMainhand 
     //TODO we could also return a pair <bool, int> where the int is the slot? 
 }
 
-void bot_ai::handlePartyMessage(std::string msg)
+void bot_ai::handlePartyMessage(const std::string& msg)
 {
     
     BotSpecGearMgr::parseResult parseResult = sBotSpecGearMgr->parseItemLink(msg);
@@ -7420,15 +7420,17 @@ void bot_ai::handlePartyMessage(std::string msg)
             float threshholdFactor = 0.90f;
             std::vector<std::pair<float, Item const*>> replacedItems = getReplacedItems(chatItemTemplate, relevantSlots, spec);
 
-            bool twohandDisparity = (chatItemTemplate->InventoryType == INVTYPE_2HWEAPON) != (replacedItems.at(0).second->GetTemplate()->InventoryType == INVTYPE_2HWEAPON);
-            //adjust Threshhold
-            if (twohandDisparity) {
-                threshholdFactor *= chatItemTemplate->InventoryType == INVTYPE_2HWEAPON ? 2.0f : 0.5f;
-            }
-
             float oldScore = 0.0f;
-            for (const auto& replaced : replacedItems) {
-                oldScore += replaced.first;
+
+            if (replacedItems.size()) {
+                bool twohandDisparity = (chatItemTemplate->InventoryType == INVTYPE_2HWEAPON) != (replacedItems.at(0).second->GetTemplate()->InventoryType == INVTYPE_2HWEAPON);
+                //adjust Threshhold
+                if (twohandDisparity) {
+                    threshholdFactor *= chatItemTemplate->InventoryType == INVTYPE_2HWEAPON ? 2.0f : 0.5f;
+                }
+                for (const auto& replaced : replacedItems) {
+                    oldScore += replaced.first;
+                }
             }
 
             if (newScore * threshholdFactor > oldScore) {

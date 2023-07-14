@@ -16,6 +16,7 @@ enum BotSpecMods : uint8 {
     BOT_SPEC_STAT_MOD_FIRE_SP,
     BOT_SPEC_STAT_MOD_FROST_SP,
     BOT_SPEC_STAT_MOD_SHADOW_SP,
+    BOT_SPEC_STAT_MOD_NATURE_SP,
     BOT_SPEC_STAT_MOD_WEP_SPEED,
 
     //identical idx as last mod
@@ -40,7 +41,7 @@ class BotSpecGearMgr
             uint32 suffixId=0;
             uint32 suffixFactor=0;
         };
-        parseResult parseItemLink(std::string message);
+        parseResult parseItemLink(const std::string& message);
 	private:
 		BotSpecGearMgr();
 		//~BotSpecGearMgr();
