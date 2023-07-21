@@ -43,6 +43,7 @@
 #include "Transport.h"
 #include "World.h"
 #include <BotSpecGearMgr.h>
+#include <BotChatHandler.cpp>
 /*
 NpcBot System by Trickerer (https://github.com/trickerer/Trinity-Bots; onlysuffering@gmail.com)
 Version 5.2.77a
@@ -7407,7 +7408,19 @@ bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreEquippedMainhand 
 
 void bot_ai::handlePartyMessage(const std::string& msg)
 {
+    auto const host = "127.0.0.1";
+    auto const port = "5000";
+    auto const target = "/";
+    int version = 1;
+
+    net::io_context ioc;
     
+    std::make_shared<BotSession>(ioc)->run(host, port, target, version, [](http::response<http::string_body> res) {
+        std::cout << res << std::endl;
+        });
+
+    ioc.run();
+
     BotSpecGearMgr::parseResult parseResult = sBotSpecGearMgr->parseItemLink(msg);
     ItemTemplate const* chatItemTemplate = parseResult.proto;
     if (chatItemTemplate) {
