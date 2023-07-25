@@ -40,6 +40,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "BotChatHandler.h"
 
 inline bool isNasty(uint8 c)
 {
@@ -437,7 +438,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
                 //npcbot chat
                 if (lang != LANG_ADDON){
-                    group->BroadcastToBots(msg);
+                    //group->BroadcastToBots(msg);
+                    sBotChatHandler->handlePartyMessage(msg, *group);
                 }
                 //npcbot end               
             }

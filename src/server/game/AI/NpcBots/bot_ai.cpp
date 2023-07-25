@@ -43,7 +43,7 @@
 #include "Transport.h"
 #include "World.h"
 #include <BotSpecGearMgr.h>
-#include <BotChatHandler.cpp>
+#include <BotChatHandler.h>
 /*
 NpcBot System by Trickerer (https://github.com/trickerer/Trinity-Bots; onlysuffering@gmail.com)
 Version 5.2.77a
@@ -7389,9 +7389,9 @@ float bot_ai::CalcSpellMaxRange(uint32 spellId, bool enemy) const
     return maxRange;
 }
 
-//BOTCHAT
-//TEMP
-//TODO Seperate Handler-Classes
+///////////
+//BOTCHAT//
+///////////
 
 //Checks if the bot can equip the given Item(template) in ANY Slot
 bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreEquippedMainhand = false, bool ignoreIlvlDisparity = true) {
@@ -7406,22 +7406,8 @@ bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreEquippedMainhand 
     //TODO we could also return a pair <bool, int> where the int is the slot? 
 }
 
-void bot_ai::handlePartyMessage(const std::string& msg)
+void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
 {
-    auto const host = "127.0.0.1";
-    auto const port = "5000";
-    auto const target = "/";
-    int version = 1;
-
-    net::io_context ioc;
-    
-    std::make_shared<BotSession>(ioc)->run(host, port, target, version, [](http::response<http::string_body> res) {
-        std::cout << res << std::endl;
-        });
-
-    ioc.run();
-
-    BotSpecGearMgr::parseResult parseResult = sBotSpecGearMgr->parseItemLink(msg);
     ItemTemplate const* chatItemTemplate = parseResult.proto;
     if (chatItemTemplate) {
         std::vector<uint8> relevantSlots = getEquippableSlots(chatItemTemplate);
@@ -7451,31 +7437,13 @@ void bot_ai::handlePartyMessage(const std::string& msg)
             }
         }
     }
-
-    //Alias for "Show Inventory" Gossip Option
-    if (msg.find("listeq") != std::string::npos) {
-        EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
-        ASSERT(einfo, "Trying to send equipment list for bot with no equip info!");
-
-        for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
-        {
-            Item const* item = _equips[i];
-            if (!item) continue;
-            std::ostringstream equipMessage;
-            _AddItemLink(master, item, equipMessage/*, false*/);
-            //uncomment if needed
-            //msg << " in slot " << uint32(i) << " (" << _getNameForSlot(i + 1) << ')';
-            if (i <= BOT_SLOT_RANGED && einfo->ItemEntry[i] == item->GetEntry())
-                equipMessage << " |cffe6cc80|h[!" << LocalizedNpcText(master, BOT_TEXT_VISUALONLY) << "!]|h|r";
-            BotWhisper(equipMessage.str(), master);
-        }
-
-        std::ostringstream gsMessage;
-        gsMessage << "GS: " << uint32(GetBotGearScores().first);
-        BotWhisper(gsMessage.str(), master);
-    }
 }
 
+/** Returns a vector of pairs in the format <GearScore, Item> which the item given as newItem would replace when equipped
+*   @param newItem - Item, which is supposed to be equipped
+*   @param relevantSlots - Equipmentslots in which the bot can wear newItem
+*   @param spec -> spec of the bot
+*/
 std::vector<std::pair<float, Item const*>> bot_ai::getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec) {
     std::vector<std::pair<float, Item const*>> replacedItems;
     for (const uint8& slot : relevantSlots) {
@@ -8629,26 +8597,7 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
             //if (action - GOSSIP_ACTION_INFO_DEF != BOT_SLOT_NONE)
             //    break;
 
-            EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
-            ASSERT(einfo, "Trying to send equipment list for bot with no equip info!");
-
-            for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
-            {
-                Item const* item = _equips[i];
-                if (!item) continue;
-                std::ostringstream msg;
-                _AddItemLink(player, item, msg/*, false*/);
-                //uncomment if needed
-                //msg << " in slot " << uint32(i) << " (" << _getNameForSlot(i + 1) << ')';
-                if (i <= BOT_SLOT_RANGED && einfo->ItemEntry[i] == item->GetEntry())
-                    msg << " |cffe6cc80|h[!" << LocalizedNpcText(player, BOT_TEXT_VISUALONLY) << "!]|h|r";
-                BotWhisper(msg.str(), player);
-            }
-
-            std::ostringstream msg2;
-            msg2 << "GS: " << uint32(GetBotGearScores().first);
-            BotWhisper(msg2.str(), player);
-
+            whisperEquipmentList(player);
             break;
         }
         case GOSSIP_SENDER_EQUIP_TRANSMOGRIFY_MHAND:     //0 - 1 main hand
@@ -10760,6 +10709,32 @@ bool bot_ai::OnGossipSelect(Player* player, Creature* creature/* == me*/, uint32
         player->PlayerTalkClass->SendCloseGossip();
 
     return true;
+}
+
+void bot_ai::whisperEquipmentList(Player* player)
+{
+    if (!player)
+        player = master;
+
+    EquipmentInfo const* einfo = BotDataMgr::GetBotEquipmentInfo(me->GetEntry());
+    ASSERT(einfo, "Trying to send equipment list for bot with no equip info!");
+
+    for (uint8 i = BOT_SLOT_MAINHAND; i != BOT_INVENTORY_SIZE; ++i)
+    {
+        Item const* item = _equips[i];
+        if (!item) continue;
+        std::ostringstream msg;
+        _AddItemLink(player, item, msg/*, false*/);
+        //uncomment if needed
+        //msg << " in slot " << uint32(i) << " (" << _getNameForSlot(i + 1) << ')';
+        if (i <= BOT_SLOT_RANGED && einfo->ItemEntry[i] == item->GetEntry())
+            msg << " |cffe6cc80|h[!" << LocalizedNpcText(player, BOT_TEXT_VISUALONLY) << "!]|h|r";
+        BotWhisper(msg.str(), player);
+    }
+
+    std::ostringstream msg2;
+    msg2 << "GS: " << uint32(GetBotGearScores().first);
+    BotWhisper(msg2.str(), player);
 }
 
 //GossipSelectCode

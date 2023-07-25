@@ -36,12 +36,6 @@ class BotSpecGearMgr
 		std::map<uint32, float> getStatWeights(uint8 spec);
 		static BotSpecGearMgr* instance();
         //typedef std::pair<ItemTemplate const*, std::pair<uint32, uint32>> parsedItemLink;
-        struct parseResult {
-            ItemTemplate const* proto=0;
-            uint32 suffixId=0;
-            uint32 suffixFactor=0;
-        };
-        parseResult parseItemLink(const std::string& message);
 	private:
 		BotSpecGearMgr();
 		//~BotSpecGearMgr();

@@ -1,7 +1,7 @@
 #include "BotSpecGearMgr.h"
 #include <map>
 #include <DBCStores.h>
-#include <boost/algorithm/string/find.hpp>
+
 
 void BotSpecGearMgr::addRawItemStats(ItemTemplate const* item, ItemStats istats, uint32 botLevel = 1)
 {
@@ -316,38 +316,7 @@ BotSpecGearMgr* BotSpecGearMgr::instance()
     return &instance;
 }
 
-BotSpecGearMgr::parseResult BotSpecGearMgr::parseItemLink(const std::string& message)
-{
-    //Check for Linked Item
-    //Item links have this kind of format: "\124cff0070dd\124Hitem:13042::::::::80:::::\124h[Sword of the Magistrate]\124h\124r", where the first block signifies color, and the part after 'Hitem:' is the itemID    
-    std::string token = "|Hitem:";
-    std::string link = message;
-    
-    std::size_t pos = link.find(token);
-    parseResult res;
-    if (pos != std::string::npos) {
-        //get itemTemplate by itemId
-        link = link.substr(pos + token.length());
-        pos = link.find(":");
-        res.proto = sObjectMgr->GetItemTemplate(std::stoi(link.substr(0, pos)));
 
-        //find suffix data - like shadow wrath, monkey, gorilla, etc
-        boost::iterator_range<std::string::iterator> suffixIdItr = boost::find_nth(link, ":", 5);
-        boost::iterator_range<std::string::iterator> suffixFactorItr = boost::find_nth(link, ":", 6);
-        boost::iterator_range<std::string::iterator> suffixEndItr = boost::find_nth(link, ":", 7);
-        if (suffixFactorItr && suffixIdItr && suffixEndItr) {
-            ptrdiff_t idIdx = std::distance(link.begin(), suffixIdItr.end());
-            ptrdiff_t factorIdx = std::distance(link.begin(), suffixFactorItr.end());
-            ptrdiff_t endIdx = std::distance(link.begin(), suffixEndItr.end());
-            std::string suffixId = link.substr(idIdx, factorIdx - (idIdx + 1));
-            std::string suffixFactor = link.substr(factorIdx, endIdx - (factorIdx + 1));
-            res.suffixFactor = std::stoi(suffixFactor);
-            res.suffixId = std::abs(std::stoi(suffixId));
-        }
-
-    }
-    return res;
-}
 float BotSpecGearMgr::getItemSpecScore(Item const* item, uint32 spec, uint32 botLevel) {
     if (!item)
         return 0.0f;

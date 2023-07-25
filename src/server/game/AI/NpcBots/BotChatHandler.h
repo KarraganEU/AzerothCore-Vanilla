@@ -12,18 +12,32 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <json.hpp>
 
 namespace beast = boost::beast;
 namespace http = beast::http;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
+using json = nlohmann::json;
 
 class BotChatHandler
 {
 public:
+private:
+    inline static const std::string itemlinkToken {"|Hitem:"};
+public:
     static BotChatHandler* instance();
+    void handlePartyMessage(const std::string& message, Group& group);
+    json buildGroupContext(const std::string& message, Group& group);
+    struct parseResult {
+        ItemTemplate const* proto = 0;
+        uint32 suffixId = 0;
+        uint32 suffixFactor = 0;
+    };
+    parseResult parseItemLink(const std::string& message);
 private:
     BotChatHandler();
+    
     //~BotChatHandler();
 };
 

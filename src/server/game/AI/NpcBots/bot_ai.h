@@ -8,6 +8,7 @@
 #include "GroupReference.h"
 //#include "ItemDefines.h"
 #include "Position.h"
+#include "BotChatHandler.h"
 
 #include <tuple>
 #include <unordered_set>
@@ -93,6 +94,7 @@ class bot_ai : public CreatureAI
 
         bool OnGossipHello(Player* player, uint32 option);
         bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action);
+        void whisperEquipmentList(Player* player);
         bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, char const* code);
 
         Creature* GetBotsPet() const { return botPet; }
@@ -347,9 +349,10 @@ class bot_ai : public CreatureAI
 
         //BOTCHAT
         bool CanEquipItem(ItemTemplate const* item,bool ignoreEquippedMainhand, bool ignoreLevelRequirement);
-        void handlePartyMessage(const std::string& );
+        void handleChatItemLink(BotChatHandler::parseResult& parseResult);
         std::vector<std::pair<float, Item const*>> getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec);
         std::vector<uint8> getEquippableSlots(ItemTemplate const* item);
+        void BotTellParty(const std::string& text, Player const* target = nullptr) const;
         void AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems);
 
     protected:
@@ -512,8 +515,7 @@ class bot_ai : public CreatureAI
 
         void BotSay(const std::string &text, Player const* target = nullptr) const;
         void BotWhisper(const std::string &text, Player const* target = nullptr) const;
-        void BotYell(const std::string &text, Player const* target = nullptr) const;
-        void BotTellParty(const std::string &text, Player const* target = nullptr) const;
+        void BotYell(const std::string &text, Player const* target = nullptr) const;        
         void BotSay(std::string&& text, Player const* target = nullptr) const;
         void BotWhisper(std::string&& text, Player const* target = nullptr) const;
         void BotYell(std::string&& text, Player const* target = nullptr) const;
