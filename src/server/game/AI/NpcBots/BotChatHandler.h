@@ -3,6 +3,7 @@
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/beast/version.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
@@ -25,8 +26,23 @@ class BotChatHandler
 public:
 private:
     inline static const std::string itemlinkToken {"|Hitem:"};
+    boost::asio::io_context ioc;
+    boost::thread_group threadPool;
+    boost::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> work_guard;
+    std::size_t poolSize;
+
 public:
     static BotChatHandler* instance();
+
+    BotChatHandler(BotChatHandler const&) = delete; // Prevent copying
+    void operator=(BotChatHandler const&) = delete; // Prevent assignment
+    ~BotChatHandler() {
+        work_guard.reset();
+        threadPool.join_all();
+    }
+
+
+    void queryBotReply(std::string body, std::map<std::string, const bot_ai*>& botMap);
     void handlePartyMessage(const std::string& message, Group& group);
     json buildGroupContext(const std::string& message, Group& group);
     struct parseResult {
@@ -35,43 +51,13 @@ public:
         uint32 suffixFactor = 0;
     };
     parseResult parseItemLink(const std::string& message);
-private:
-    BotChatHandler();
-    
-    //~BotChatHandler();
-};
 
-//class BotChatRequestSession : public std::enable_shared_from_this<BotChatRequestSession> {
-//    tcp::resolver resolver_;
-//    beast::flat_buffer buffer_;
-//    http::request<http::empty_body> req_;
-//    http::response<http::string_body> res_;
-//    tcp::socket socket_;
-//
-//public:
-//    explicit BotChatRequestSession(net::io_context& ioc)
-//        : resolver_(net::make_strand(ioc)), socket_(net::make_strand(ioc)) {}
-//    void run(char const* host, char const* port, char const* target, int version, std::function<void(http::response<http::string_body>)> callback);
-//    void on_resolve(beast::error_code ec, tcp::resolver::results_type results, std::function<void(http::response<http::string_body>)> callback);
-//    void on_connect(beast::error_code ec, tcp::resolver::results_type::endpoint_type, std::function<void(http::response<http::string_body>)> callback);
-//    void on_write(beast::error_code ec, std::size_t bytes_transferred, std::function<void(http::response<http::string_body>)> callback);
-//    void on_read(beast::error_code ec, std::size_t bytes_transferred, std::function<void(http::response<http::string_body>)> callback);
-//    void fail(beast::error_code ec, char const* what);
-//    static void test() {
-//        auto const host = "localhost";
-//        auto const port = "5000";
-//        auto const target = "/test";
-//        int version = 1;
-//
-//        net::io_context ioc;
-//
-//        std::make_shared<BotChatRequestSession>(ioc)->run(host, port, target, version, [](http::response<http::string_body> res) {
-//            std::cout << res << std::endl;
-//            });
-//
-//        ioc.run();
-//    };
-//};
+
+private:
+    BotChatHandler(std::size_t size) : poolSize(size), work_guard(boost::asio::make_work_guard(ioc)) { start(); }
+    void start();
+    
+};
 
 #define sBotChatHandler BotChatHandler::instance()
 

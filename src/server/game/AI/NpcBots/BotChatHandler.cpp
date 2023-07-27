@@ -98,12 +98,6 @@ public:
     }
 };
 
-BotChatHandler* BotChatHandler::instance()
-{
-    static BotChatHandler instance;
-    return &instance;
-}
-
 void BotChatHandler::handlePartyMessage(const std::string& message, Group& group)
 {
     if (message.find(itemlinkToken) != std::string::npos) {
@@ -141,31 +135,8 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
     }
 
     json context = buildGroupContext(message, group);
-    auto const host = "127.0.0.1";
-    auto const port = "5000";
-    auto const target = "/group/1234";
-    int version = 1;
 
-    net::io_context ioc;
-    
-
-    std::make_shared<BotSession>(ioc)->run(host, port, target, version, context.dump(), [&botMap](http::response<http::string_body> res) {
-
-        std::cout << res.body() << std::endl;
-        json replies = json::parse(res.body());
-        for (auto const& rep : replies["replies"]) {
-            auto it = botMap.find(rep["speaker"]);
-            if (it == botMap.end()) {
-                // Key not found
-                continue;
-            }
-            const bot_ai* speaker = it->second;
-            speaker->BotTellParty(rep["message"], nullptr);
-        }
-    });
-        
-
-    ioc.run();
+    queryBotReply(context.dump(), botMap);
 }
 
 //TODO maybe add caching?
@@ -209,6 +180,26 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
     return postBody;
 }
 
+void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots)
+{
+    auto const host = "127.0.0.1";
+    auto const port = "5000";
+    auto const target = "/group/1234";
+    int version = 1;
+    std::make_shared<BotSession>(ioc)->run(host, port, target, version, body, [this, botMap=bots](http::response<http::string_body> res) {
+        json replies = json::parse(res.body());
+        for (auto const& rep : replies["replies"]) {
+            auto it = botMap.find(rep["speaker"]);
+            if (it == botMap.end()) {
+                // Key not found
+                continue;
+            }
+            const bot_ai* speaker = it->second;
+            speaker->BotTellParty(rep["message"], nullptr);
+        }
+    });
+}
+
 BotChatHandler::parseResult BotChatHandler::parseItemLink(const std::string& message)
 {
     //Check for Linked Item
@@ -242,6 +233,18 @@ BotChatHandler::parseResult BotChatHandler::parseItemLink(const std::string& mes
     return res;
 }
 
-BotChatHandler::BotChatHandler()
+//Object Lifetime Methods
+
+BotChatHandler* BotChatHandler::instance()
 {
+    static BotChatHandler instance(4); //TODO maybe make that variable
+    return &instance;
+}
+
+void BotChatHandler::start() {
+    for (std::size_t i = 0; i < poolSize; ++i) {
+        threadPool.create_thread([this]() {
+            ioc.run();
+        });
+    }
 }

@@ -32,7 +32,7 @@ else()
   set(BOOST_REQUIRED_VERSION 1.67)
 endif()
 
-find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system filesystem program_options iostreams regex)
+find_package(Boost ${BOOST_REQUIRED_VERSION} REQUIRED system filesystem program_options iostreams regex thread)
 
 if(NOT Boost_FOUND)
   if(NOT DEFINED ENV{BOOST_ROOT} AND NOT DEFINED Boost_DIR AND NOT DEFINED BOOST_ROOT AND NOT DEFINED BOOSTROOT)
@@ -43,7 +43,7 @@ endif()
 # Find if Boost was compiled in C++03 mode because it requires -DBOOST_NO_CXX11_SCOPED_ENUMS
 
 set(CMAKE_REQUIRED_INCLUDES ${Boost_INCLUDE_DIR})
-set(CMAKE_REQUIRED_LIBRARIES ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_IOSTREAMS_LIBRARY})
+set(CMAKE_REQUIRED_LIBRARIES ${Boost_SYSTEM_LIBRARY} ${Boost_FILESYSTEM_LIBRARY} ${Boost_IOSTREAMS_LIBRARY} ${Boost_THREAD_LIBRARY})
 set(CMAKE_REQUIRED_FLAGS "-std=c++11")
 check_cxx_source_compiles("
   #include <boost/filesystem/path.hpp>
