@@ -6,6 +6,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <cstdlib>
+#include <Config.h>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -36,7 +37,7 @@ public:
     explicit BotSession(net::io_context& ioc)
         : resolver_(net::make_strand(ioc)), socket_(net::make_strand(ioc)) {}
 
-    void run(char const* host, char const* port, char const* target, int version, const std::string& body, std::function<void(http::response<http::string_body>)> callback) {
+    void run(std::string& host, std::string& port, std::string target, int version, const std::string& body, std::function<void(http::response<http::string_body>)> callback) {
         callback_ = std::move(callback);
         //req_.version(version);
         req_.method(http::verb::post);
@@ -100,7 +101,7 @@ public:
 
 void BotChatHandler::handlePartyMessage(const std::string& message, Group& group)
 {
-    if (message.find(itemlinkToken) != std::string::npos) {
+    if (message.find(_itemlinkToken) != std::string::npos) {
         parseResult parseResult = parseItemLink(message);
         for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
         {
@@ -125,6 +126,8 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
         return;
     }
     //do proper chat
+    if (!_enableChat) return;
+
     std::map<std::string, const bot_ai*> botMap;
     for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
     {
@@ -136,7 +139,7 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
 
     json context = buildGroupContext(message, group);
 
-    queryBotReply(context.dump(), botMap);
+    queryBotReply(context.dump(), botMap, group.GetLeaderGUID().GetRawValue());
 }
 
 //TODO maybe add caching?
@@ -180,13 +183,10 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
     return postBody;
 }
 
-void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots)
+void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots, uint64 leaderId)
 {
-    auto const host = "127.0.0.1";
-    auto const port = "5000";
-    auto const target = "/group/1234";
-    int version = 1;
-    std::make_shared<BotSession>(ioc)->run(host, port, target, version, body, [this, botMap=bots](http::response<http::string_body> res) {
+    std::string target = _target + std::to_string(leaderId); //should be player id really
+    std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, botMap=bots](http::response<http::string_body> res) {
         json replies = json::parse(res.body());
         for (auto const& rep : replies["replies"]) {
             auto it = botMap.find(rep["speaker"]);
@@ -204,14 +204,14 @@ BotChatHandler::parseResult BotChatHandler::parseItemLink(const std::string& mes
 {
     //Check for Linked Item
     //Item links have this kind of format: "\124cff0070dd\124Hitem:13042::::::::80:::::\124h[Sword of the Magistrate]\124h\124r", where the first block signifies color, and the part after 'Hitem:' is the itemID    
-    std::string token = "|Hitem:";
+    
     std::string link = message;
 
-    std::size_t pos = link.find(token);
+    std::size_t pos = link.find(_itemlinkToken);
     parseResult res;
     if (pos != std::string::npos) {
         //get itemTemplate by itemId
-        link = link.substr(pos + token.length());
+        link = link.substr(pos + _itemlinkToken.length());
         pos = link.find(":");
         res.proto = sObjectMgr->GetItemTemplate(std::stoi(link.substr(0, pos)));
 
@@ -237,7 +237,7 @@ BotChatHandler::parseResult BotChatHandler::parseItemLink(const std::string& mes
 
 BotChatHandler* BotChatHandler::instance()
 {
-    static BotChatHandler instance(4); //TODO maybe make that variable
+    static BotChatHandler instance(2); //TODO maybe make that variable
     return &instance;
 }
 
@@ -247,4 +247,12 @@ void BotChatHandler::start() {
             ioc.run();
         });
     }
+}
+
+void BotChatHandler::loadConfig()
+{
+    _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
+    _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
+    _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
+    _target = "/group/";
 }

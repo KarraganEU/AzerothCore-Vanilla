@@ -25,7 +25,11 @@ class BotChatHandler
 {
 public:
 private:
-    inline static const std::string itemlinkToken {"|Hitem:"};
+    inline static const std::string _itemlinkToken {"|Hitem:"};
+    bool _enableChat;
+    std::string _host;
+    std::string _port;
+    std::string _target;
     boost::asio::io_context ioc;
     boost::thread_group threadPool;
     boost::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> work_guard;
@@ -36,13 +40,13 @@ public:
 
     BotChatHandler(BotChatHandler const&) = delete; // Prevent copying
     void operator=(BotChatHandler const&) = delete; // Prevent assignment
+    BotChatHandler() = delete;
     ~BotChatHandler() {
         work_guard.reset();
         threadPool.join_all();
     }
 
-
-    void queryBotReply(std::string body, std::map<std::string, const bot_ai*>& botMap);
+    void queryBotReply(std::string body, std::map<std::string, const bot_ai*>& botMap, uint64 leaderId);
     void handlePartyMessage(const std::string& message, Group& group);
     json buildGroupContext(const std::string& message, Group& group);
     struct parseResult {
@@ -54,7 +58,12 @@ public:
 
 
 private:
-    BotChatHandler(std::size_t size) : poolSize(size), work_guard(boost::asio::make_work_guard(ioc)) { start(); }
+    BotChatHandler(std::size_t size) : poolSize(size), work_guard(boost::asio::make_work_guard(ioc)) {
+        //make poolsize configurable
+        loadConfig();
+        start();
+    }
+    void loadConfig();
     void start();
     
 };
