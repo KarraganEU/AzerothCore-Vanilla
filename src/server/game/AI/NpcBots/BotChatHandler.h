@@ -68,6 +68,7 @@ private:
     }
     void loadConfig();
     void start();
+    std::string getSpecName(uint32 spec);
     
 };
 

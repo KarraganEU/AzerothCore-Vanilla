@@ -151,16 +151,21 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
     postBody["context"]["players"] = json::array();
     postBody["context"]["bots"] = json::array();
     //add player context
-    const Player* player = group.GetLeader();
+    Player* player = group.GetLeader();
+    uint32 spec = player->GetSpec();
+
     json leader;
     leader["name"] = player->GetName();
-    leader["level"] = player->GetLevel();
+    leader["level"] = player->GetLevel();    
     ChrRacesEntry const* rEntry = sChrRacesStore.LookupEntry(player->getRace());
     leader["race"] = rEntry->name[0]; 
     ChrClassesEntry const* cEntry = sChrClassesStore.LookupEntry(player->getClass());
     leader["class"] = cEntry->name[0];
     leader["gender"] = player->getGender() != 0 ? "female" : "male";
-    //TODO How the fuck do I get the Player spec as string
+    if (spec) {
+        leader["spec"] = getSpecName(spec);        
+    }
+
     postBody["context"]["players"].push_back(leader);
 
     //add bot context
@@ -187,6 +192,8 @@ void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const
 {
     std::string target = _groupTarget + std::to_string(leaderId); //should be player id really
     std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, botMap=bots](http::response<http::string_body> res) {
+        if (res.result_int() != 200) return;
+
         json replies = json::parse(res.body());
         for (auto const& rep : replies["replies"]) {
             auto it = botMap.find(rep["speaker"]);
@@ -207,7 +214,7 @@ void BotChatHandler::setPartyMode(const std::string& mode, uint64 leaderId, Chat
     body["mode"] = mode;
 
     std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body.dump(), [handler,mode](http::response<http::string_body> res) {
-        //give the handler here to make the success/failure message
+        if (res.result_int() != 200) return;
         if (res.body()._Equal(mode)) {
             handler->PSendSysMessage("Set conversation mode to %s", mode);
         }
@@ -287,4 +294,69 @@ void BotChatHandler::loadConfig()
     _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
     _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
     _groupTarget = "/group/";
+}
+
+std::string BotChatHandler::getSpecName(uint32 spec)
+{
+    switch (spec) {
+        case TALENT_TREE_WARRIOR_ARMS:
+            return "Arms";
+        case TALENT_TREE_WARRIOR_FURY:
+            return "Fury";
+        case TALENT_TREE_WARRIOR_PROTECTION:
+            return "Protection";
+        case TALENT_TREE_PALADIN_HOLY:
+            return "Holy";
+        case TALENT_TREE_PALADIN_PROTECTION:
+            return "Protection";
+        case TALENT_TREE_PALADIN_RETRIBUTION:
+            return "Retribution";
+        case TALENT_TREE_HUNTER_BEAST_MASTERY:
+            return "Beast Mastery";
+        case TALENT_TREE_HUNTER_MARKSMANSHIP:
+            return "Marksmanship";
+        case TALENT_TREE_HUNTER_SURVIVAL:
+            return "Survival";
+        case TALENT_TREE_ROGUE_ASSASSINATION:
+            return "Assassination";
+        case TALENT_TREE_ROGUE_COMBAT:
+            return "Combat";
+        case TALENT_TREE_ROGUE_SUBTLETY:
+            return "Subtlety";
+        case TALENT_TREE_PRIEST_DISCIPLINE:
+            return "Discipline";
+        case TALENT_TREE_PRIEST_SHADOW:
+            return "Shadow";
+        case TALENT_TREE_DEATH_KNIGHT_BLOOD:
+            return "Blood";
+        case TALENT_TREE_DEATH_KNIGHT_FROST:
+            return "Frost";
+        case TALENT_TREE_DEATH_KNIGHT_UNHOLY:
+            return "Unholy";
+        case TALENT_TREE_SHAMAN_ELEMENTAL:
+            return "Elemental";
+        case TALENT_TREE_SHAMAN_ENHANCEMENT:
+            return "Enhancement";
+        case TALENT_TREE_SHAMAN_RESTORATION:
+            return "Restoration";
+        case TALENT_TREE_MAGE_ARCANE:
+            return "Arcane";
+        case TALENT_TREE_MAGE_FIRE:
+            return "Fire";
+        case TALENT_TREE_MAGE_FROST:
+            return "Frost";
+        case TALENT_TREE_WARLOCK_AFFLICTION:
+            return "Affliction";
+        case TALENT_TREE_WARLOCK_DEMONOLOGY:
+            return "Demonology";
+        case TALENT_TREE_WARLOCK_DESTRUCTION:
+            return "Destruction";
+        case TALENT_TREE_DRUID_BALANCE:
+            return "Balance";
+        case TALENT_TREE_DRUID_FERAL_COMBAT:
+            return "Combat";
+        case TALENT_TREE_DRUID_RESTORATION:
+            return "Restoration";
+    }
+    return "";
 }
