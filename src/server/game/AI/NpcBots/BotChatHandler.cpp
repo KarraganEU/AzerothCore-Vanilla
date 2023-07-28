@@ -185,7 +185,7 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
 
 void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots, uint64 leaderId)
 {
-    std::string target = _target + std::to_string(leaderId); //should be player id really
+    std::string target = _groupTarget + std::to_string(leaderId); //should be player id really
     std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, botMap=bots](http::response<http::string_body> res) {
         json replies = json::parse(res.body());
         for (auto const& rep : replies["replies"]) {
@@ -196,6 +196,38 @@ void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const
             }
             const bot_ai* speaker = it->second;
             speaker->BotTellParty(rep["message"], nullptr);
+        }
+    });
+}
+
+void BotChatHandler::setPartyMode(const std::string& mode, uint64 leaderId, ChatHandler* handler)
+{
+    std::string target = _groupTarget + std::to_string(leaderId) + "/mode"; //should be player id really
+    json body;
+    body["mode"] = mode;
+
+    std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body.dump(), [handler,mode](http::response<http::string_body> res) {
+        //give the handler here to make the success/failure message
+        if (res.body()._Equal(mode)) {
+            handler->PSendSysMessage("Set conversation mode to %s", mode);
+        }
+        else {
+            handler->PSendSysMessage("Error setting conversation mode: %s", res.body());
+        }
+    });
+}
+
+void BotChatHandler::eraseHistory(uint64 leaderId, ChatHandler* handler)
+{
+    std::string target = _groupTarget + std::to_string(leaderId) + "/history"; //should be player id really
+
+    std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, "", [handler](http::response<http::string_body> res) {
+        //give the handler here to make the success/failure message
+        if (res.result_int() == 200) {
+            handler->PSendSysMessage("Successfully erased chat history");
+        }
+        else {
+            handler->PSendSysMessage("Error erasing chat history: %s", res.body());
         }
     });
 }
@@ -254,5 +286,5 @@ void BotChatHandler::loadConfig()
     _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
     _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
     _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
-    _target = "/group/";
+    _groupTarget = "/group/";
 }

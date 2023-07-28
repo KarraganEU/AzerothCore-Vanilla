@@ -84,7 +84,9 @@ enum rbac
     RBAC_PERM_COMMAND_NPCBOT_SPAWNED                         = SEC_ADMINISTRATOR,
     RBAC_PERM_COMMAND_NPCBOT_COMMAND_MISC                    = SEC_PLAYER,
     RBAC_PERM_COMMAND_NPCBOT_CREATENEW                       = SEC_ADMINISTRATOR,
-    RBAC_PERM_COMMAND_NPCBOT_SEND                            = SEC_PLAYER
+    RBAC_PERM_COMMAND_NPCBOT_SEND                            = SEC_PLAYER,
+    RBAC_PERM_COMMAND_NPCBOT_CHAT_MODE                       = SEC_PLAYER,
+    RBAC_PERM_COMMAND_NPCBOT_CHAT_ERASE                      = SEC_PLAYER
 };
 //end Acore only
 #endif
@@ -644,11 +646,20 @@ public:
             { "item",       HandleNpcBotUseOnBotItemCommand,        rbac::RBAC_PERM_COMMAND_NPCBOT_COMMAND_MISC,       Console::No  },
         };
 
+        //BOTCHAT
+        static ChatCommandTable npcbotChatCommandTable =
+        {
+            { "mode",    HandleNpcBotChatSetModeCommand,            rbac::RBAC_PERM_COMMAND_NPCBOT_CHAT_MODE,          Console::No  },
+            { "delete",  HandleNpcBotChatDeleteHistoryCommand,      rbac::RBAC_PERM_COMMAND_NPCBOT_CHAT_ERASE,         Console::No  },
+        };
+        //BOTCHAT END
+
         static ChatCommandTable npcbotCommandTable =
         {
             //{ "debug",      npcbotDebugCommandTable                                                                                 },
             //{ "toggle",     npcbotToggleCommandTable                                                                                },
             { "set",        npcbotSetCommandTable                                                                                   },
+            { "chat",       npcbotChatCommandTable                                                                                  },
             { "add",        HandleNpcBotAddCommand,                 rbac::RBAC_PERM_COMMAND_NPCBOT_ADD,                Console::No  },
             { "remove",     HandleNpcBotRemoveCommand,              rbac::RBAC_PERM_COMMAND_NPCBOT_REMOVE,             Console::No  },
             { "createnew",  HandleNpcBotCreateNewCommand,           rbac::RBAC_PERM_COMMAND_NPCBOT_CREATENEW,          Console::Yes },
@@ -4182,6 +4193,25 @@ public:
         handler->SendGlobalGMSysMessage("NpcBot config settings reloaded.");
         return true;
     }
+
+    //BOTCHAT
+    static bool HandleNpcBotChatSetModeCommand(ChatHandler* handler, Optional<std::string> modeString)
+    {
+        Player* chr = handler->GetSession()->GetPlayer();
+        if (!modeString) return false;
+
+        sBotChatHandler->setPartyMode(*modeString, chr->GetGUID().GetRawValue(), handler);
+        return true;
+    }
+
+    static bool HandleNpcBotChatDeleteHistoryCommand(ChatHandler* handler)
+    {
+        Player* chr = handler->GetSession()->GetPlayer();
+
+        sBotChatHandler->eraseHistory(chr->GetGUID().GetRawValue(), handler);
+        return true;
+    }
+    //BOTCHAT END
 };
 
 void AddSC_script_bot_commands()

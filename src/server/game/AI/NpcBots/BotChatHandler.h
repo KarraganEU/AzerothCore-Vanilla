@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <json.hpp>
+#include <Chat.h>
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -29,7 +30,7 @@ private:
     bool _enableChat;
     std::string _host;
     std::string _port;
-    std::string _target;
+    std::string _groupTarget;
     boost::asio::io_context ioc;
     boost::thread_group threadPool;
     boost::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> work_guard;
@@ -48,6 +49,8 @@ public:
 
     void queryBotReply(std::string body, std::map<std::string, const bot_ai*>& botMap, uint64 leaderId);
     void handlePartyMessage(const std::string& message, Group& group);
+    void setPartyMode(const std::string& mode, uint64 leaderId, ChatHandler* handler);
+    void eraseHistory(uint64 leaderId, ChatHandler* handler);
     json buildGroupContext(const std::string& message, Group& group);
     struct parseResult {
         ItemTemplate const* proto = 0;
