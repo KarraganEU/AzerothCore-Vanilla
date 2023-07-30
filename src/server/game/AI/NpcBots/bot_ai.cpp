@@ -383,13 +383,6 @@ void bot_ai::BotYell(const std::string &text, Player const* /*target*/) const
     me->Yell(text, LANG_UNIVERSAL);
 }
 
-void bot_ai::BotTellParty(const std::string& text, Player const* target) const
-{
-    WorldPacket data;
-    ChatHandler::BuildChatPacket(data, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, me, nullptr, text);
-    me->GetBotGroup()->BroadcastPacket(&data, false, 0, me->GetGUID());
-}
-
 void bot_ai::BotSay(std::string&& text, Player const* target) const
 {
     if (!target && master->GetTypeId() == TYPEID_PLAYER)
@@ -7387,143 +7380,6 @@ float bot_ai::CalcSpellMaxRange(uint32 spellId, bool enemy) const
 
     ApplyClassSpellRangeMods(spellInfo, maxRange);
     return maxRange;
-}
-
-///////////
-//BOTCHAT//
-///////////
-
-//Checks if the bot can equip the given Item(template) in ANY Slot
-bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreEquippedMainhand = false, bool ignoreIlvlDisparity = true) {
-    for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
-    {
-        if (_canEquip(item, k, ignoreIlvlDisparity, nullptr, ignoreEquippedMainhand))
-        {
-            return true;
-        }
-    }
-    return false;
-    //TODO we could also return a pair <bool, int> where the int is the slot? 
-}
-
-void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
-{
-    ItemTemplate const* chatItemTemplate = parseResult.proto;
-    if (chatItemTemplate) {
-        std::vector<uint8> relevantSlots = getEquippableSlots(chatItemTemplate);
-
-        if (relevantSlots.size()) {
-            uint32 spec = (_botclass == BOT_CLASS_DRUID) && (GetSpec() == BOT_SPEC_DRUID_FERAL) ? (IsTank() ? BOT_SPEC_DRUID_FERAL_BEAR : BOT_SPEC_DRUID_FERAL_CAT) : GetSpec();
-
-            float newScore = sBotSpecGearMgr->getItemSpecScore(chatItemTemplate, parseResult.suffixId, parseResult.suffixFactor, spec, me->GetLevel());
-            float threshholdFactor = 0.90f;
-            std::vector<std::pair<float, Item const*>> replacedItems = getReplacedItems(chatItemTemplate, relevantSlots, spec);
-
-            float oldScore = 0.0f;
-
-            if (replacedItems.size()) {
-                bool twohandDisparity = (chatItemTemplate->InventoryType == INVTYPE_2HWEAPON) != (replacedItems.at(0).second->GetTemplate()->InventoryType == INVTYPE_2HWEAPON);
-                //adjust Threshhold
-                if (twohandDisparity) {
-                    threshholdFactor *= chatItemTemplate->InventoryType == INVTYPE_2HWEAPON ? 2.0f : 0.5f;
-                }
-                for (const auto& replaced : replacedItems) {
-                    oldScore += replaced.first;
-                }
-            }
-
-            if (newScore * threshholdFactor > oldScore) {
-                AnnounceNeed(newScore, replacedItems);
-            }
-        }
-    }
-}
-
-/** Returns a vector of pairs in the format <GearScore, Item> which the item given as newItem would replace when equipped
-*   @param newItem - Item, which is supposed to be equipped
-*   @param relevantSlots - Equipmentslots in which the bot can wear newItem
-*   @param spec -> spec of the bot
-*/
-std::vector<std::pair<float, Item const*>> bot_ai::getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec) {
-    std::vector<std::pair<float, Item const*>> replacedItems;
-    for (const uint8& slot : relevantSlots) {
-        if (slot > BOT_SLOT_OFFHAND) {
-            Item* const current = _equips[slot];
-            if (current) {
-                std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(current, spec, me->GetLevel()), current);
-                replacedItems.push_back(mh);
-            }
-            return replacedItems;
-        }
-        //WEAPONS
-        if (newItem->InventoryType == INVTYPE_2HWEAPON) {
-            Item* const currentMH = _equips[BOT_SLOT_MAINHAND];
-            if (currentMH) {
-                std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(currentMH, spec, me->GetLevel()), currentMH);
-                replacedItems.push_back(mh);
-            }
-
-            Item* const currentOH = _equips[BOT_SLOT_OFFHAND];
-            if (currentOH) {
-                std::pair<float, Item const*> oh(sBotSpecGearMgr->getItemSpecScore(currentOH, spec, me->GetLevel()), currentOH);
-                replacedItems.push_back(oh);
-            }
-            return replacedItems;
-        }
-        //1h Weapons
-        if (relevantSlots.size() > 1) { //only replace the lesser slot
-            Item* const currentMH = _equips[BOT_SLOT_MAINHAND];
-            std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(currentMH, spec, me->GetLevel()), currentMH);
-            Item* const currentOH = _equips[BOT_SLOT_OFFHAND];
-            std::pair<float, Item const*> oh(sBotSpecGearMgr->getItemSpecScore(currentOH, spec, me->GetLevel()), currentOH);
-
-            if(currentMH && currentOH) //if one slot is not used, obviously put in that slot
-                replacedItems.push_back(mh.first < oh.first ? mh : oh);
-
-            return replacedItems;
-        }
-        Item* const current = (_equips[BOT_SLOT_MAINHAND] && _equips[BOT_SLOT_MAINHAND]->GetTemplate()->InventoryType==INVTYPE_2HWEAPON) ? _equips[BOT_SLOT_MAINHAND] : _equips[slot]; //TODO CHECK, iff
-        if (current) {
-            std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(current, spec, me->GetLevel()), current);
-            replacedItems.push_back(mh);
-        }
-        //when adjusting threshold just check for disparity in current2h vs new2h if curINVTYPE != newINVTYPE -> adjust
-    }    
-    return replacedItems;
-}
-
-//puts all slots the item can be equipped in into the given list. Mostly useful for weapons which can be offhand, mainhand, or both
-std::vector<uint8>  bot_ai::getEquippableSlots(ItemTemplate const* item) {
-    std::vector<uint8> list;
-    for (uint8 i = BOT_SLOT_MAINHAND; i < BOT_INVENTORY_SIZE; ++i)
-    {
-        if (_canEquip(item, i, true, nullptr, true)) {
-            list.push_back(i);
-        }
-    }
-    return list;
-}
-
-void bot_ai::AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems) {
-    std::ostringstream msgNewScore;
-    msgNewScore << "I could use this! SpecScore: " << uint32(newItemScore);
-    BotWhisper(msgNewScore.str(), master);
-
-    if (!oldItems.size())
-        return;
-
-    std::ostringstream msgOldItem;
-    msgOldItem << "Replaced Item(s): ";
-    std::ostringstream msgOldScore;
-    msgOldScore << "Old SpecScore: ";
-
-    for (const auto& replaced : oldItems) {                
-        _AddItemLink(master, replaced.second, msgOldItem/*, false*/);
-        msgOldItem << " ";
-        msgOldScore << uint32(replaced.first) << " ";
-    }
-    BotWhisper(msgOldScore.str(), master);
-    BotWhisper(msgOldItem.str(), master);
 }
 
 //////////
@@ -19732,6 +19588,150 @@ bool bot_ai::IsFlagCarrier(Unit const* unit, BattlegroundTypeId bgTypeId)
     }
 
     return false;
+}
+
+///////////
+//BOTCHAT//
+///////////
+
+//Checks if the bot can equip the given Item(template) in ANY Slot
+bool bot_ai::CanEquipItem(ItemTemplate const* item, bool ignoreEquippedMainhand = false, bool ignoreIlvlDisparity = true) {
+    for (uint8 k = BOT_SLOT_MAINHAND; k != BOT_INVENTORY_SIZE; ++k)
+    {
+        if (_canEquip(item, k, ignoreIlvlDisparity, nullptr, ignoreEquippedMainhand))
+        {
+            return true;
+        }
+    }
+    return false;
+    //TODO we could also return a pair <bool, int> where the int is the slot? 
+}
+
+void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
+{
+    ItemTemplate const* chatItemTemplate = parseResult.proto;
+    if (chatItemTemplate) {
+        std::vector<uint8> relevantSlots = getEquippableSlots(chatItemTemplate);
+
+        if (relevantSlots.size()) {
+            uint32 spec = (_botclass == BOT_CLASS_DRUID) && (GetSpec() == BOT_SPEC_DRUID_FERAL) ? (IsTank() ? BOT_SPEC_DRUID_FERAL_BEAR : BOT_SPEC_DRUID_FERAL_CAT) : GetSpec();
+
+            float newScore = sBotSpecGearMgr->getItemSpecScore(chatItemTemplate, parseResult.suffixId, parseResult.suffixFactor, spec, me->GetLevel());
+            float threshholdFactor = 0.90f;
+            std::vector<std::pair<float, Item const*>> replacedItems = getReplacedItems(chatItemTemplate, relevantSlots, spec);
+
+            float oldScore = 0.0f;
+
+            if (replacedItems.size()) {
+                bool twohandDisparity = (chatItemTemplate->InventoryType == INVTYPE_2HWEAPON) != (replacedItems.at(0).second->GetTemplate()->InventoryType == INVTYPE_2HWEAPON);
+                //adjust Threshhold
+                if (twohandDisparity) {
+                    threshholdFactor *= chatItemTemplate->InventoryType == INVTYPE_2HWEAPON ? 2.0f : 0.5f;
+                }
+                for (const auto& replaced : replacedItems) {
+                    oldScore += replaced.first;
+                }
+            }
+
+            if (newScore * threshholdFactor > oldScore) {
+                AnnounceNeed(newScore, replacedItems);
+            }
+        }
+    }
+}
+
+/** Returns a vector of pairs in the format <GearScore, Item> which the item given as newItem would replace when equipped
+*   @param newItem - Item, which is supposed to be equipped
+*   @param relevantSlots - Equipmentslots in which the bot can wear newItem
+*   @param spec -> spec of the bot
+*/
+std::vector<std::pair<float, Item const*>> bot_ai::getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec) {
+    std::vector<std::pair<float, Item const*>> replacedItems;
+    for (const uint8& slot : relevantSlots) {
+        if (slot > BOT_SLOT_OFFHAND) {
+            Item* const current = _equips[slot];
+            if (current) {
+                std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(current, spec, me->GetLevel()), current);
+                replacedItems.push_back(mh);
+            }
+            return replacedItems;
+        }
+        //WEAPONS
+        if (newItem->InventoryType == INVTYPE_2HWEAPON) {
+            Item* const currentMH = _equips[BOT_SLOT_MAINHAND];
+            if (currentMH) {
+                std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(currentMH, spec, me->GetLevel()), currentMH);
+                replacedItems.push_back(mh);
+            }
+
+            Item* const currentOH = _equips[BOT_SLOT_OFFHAND];
+            if (currentOH) {
+                std::pair<float, Item const*> oh(sBotSpecGearMgr->getItemSpecScore(currentOH, spec, me->GetLevel()), currentOH);
+                replacedItems.push_back(oh);
+            }
+            return replacedItems;
+        }
+        //1h Weapons
+        if (relevantSlots.size() > 1) { //only replace the lesser slot
+            Item* const currentMH = _equips[BOT_SLOT_MAINHAND];
+            std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(currentMH, spec, me->GetLevel()), currentMH);
+            Item* const currentOH = _equips[BOT_SLOT_OFFHAND];
+            std::pair<float, Item const*> oh(sBotSpecGearMgr->getItemSpecScore(currentOH, spec, me->GetLevel()), currentOH);
+
+            if (currentMH && currentOH) //if one slot is not used, obviously put in that slot
+                replacedItems.push_back(mh.first < oh.first ? mh : oh);
+
+            return replacedItems;
+        }
+        Item* const current = (_equips[BOT_SLOT_MAINHAND] && _equips[BOT_SLOT_MAINHAND]->GetTemplate()->InventoryType == INVTYPE_2HWEAPON) ? _equips[BOT_SLOT_MAINHAND] : _equips[slot]; //TODO CHECK, iff
+        if (current) {
+            std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(current, spec, me->GetLevel()), current);
+            replacedItems.push_back(mh);
+        }
+        //when adjusting threshold just check for disparity in current2h vs new2h if curINVTYPE != newINVTYPE -> adjust
+    }
+    return replacedItems;
+}
+
+//puts all slots the item can be equipped in into the given list. Mostly useful for weapons which can be offhand, mainhand, or both
+std::vector<uint8>  bot_ai::getEquippableSlots(ItemTemplate const* item) {
+    std::vector<uint8> list;
+    for (uint8 i = BOT_SLOT_MAINHAND; i < BOT_INVENTORY_SIZE; ++i)
+    {
+        if (_canEquip(item, i, true, nullptr, true)) {
+            list.push_back(i);
+        }
+    }
+    return list;
+}
+
+void bot_ai::AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems) {
+    std::ostringstream msgNewScore;
+    msgNewScore << "I could use this! SpecScore: " << uint32(newItemScore);
+    BotWhisper(msgNewScore.str(), master);
+
+    if (!oldItems.size())
+        return;
+
+    std::ostringstream msgOldItem;
+    msgOldItem << "Replaced Item(s): ";
+    std::ostringstream msgOldScore;
+    msgOldScore << "Old SpecScore: ";
+
+    for (const auto& replaced : oldItems) {
+        _AddItemLink(master, replaced.second, msgOldItem/*, false*/);
+        msgOldItem << " ";
+        msgOldScore << uint32(replaced.first) << " ";
+    }
+    BotWhisper(msgOldScore.str(), master);
+    BotWhisper(msgOldItem.str(), master);
+}
+
+void bot_ai::BotTellParty(const std::string& text) const
+{
+    WorldPacket data;
+    ChatHandler::BuildChatPacket(data, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, me, nullptr, text);
+    me->GetBotGroup()->BroadcastPacket(&data, false, 0, me->GetGUID());
 }
 
 #ifdef _MSC_VER

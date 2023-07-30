@@ -346,13 +346,13 @@ class bot_ai : public CreatureAI
         void UpdateContestedPvP();
 
         static bool IsFlagCarrier(Unit const* unit, BattlegroundTypeId bgTypeId = BATTLEGROUND_TYPE_NONE);
-
+        void BotSay(std::string&& text, Player const* target = nullptr) const;
         //BOTCHAT
         bool CanEquipItem(ItemTemplate const* item,bool ignoreEquippedMainhand, bool ignoreLevelRequirement);
         void handleChatItemLink(BotChatHandler::parseResult& parseResult);
         std::vector<std::pair<float, Item const*>> getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec);
         std::vector<uint8> getEquippableSlots(ItemTemplate const* item);
-        void BotTellParty(const std::string& text, Player const* target = nullptr) const;
+        void BotTellParty(const std::string& text) const;
         void AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems);
 
     protected:
@@ -516,7 +516,6 @@ class bot_ai : public CreatureAI
         void BotSay(const std::string &text, Player const* target = nullptr) const;
         void BotWhisper(const std::string &text, Player const* target = nullptr) const;
         void BotYell(const std::string &text, Player const* target = nullptr) const;        
-        void BotSay(std::string&& text, Player const* target = nullptr) const;
         void BotWhisper(std::string&& text, Player const* target = nullptr) const;
         void BotYell(std::string&& text, Player const* target = nullptr) const;
 

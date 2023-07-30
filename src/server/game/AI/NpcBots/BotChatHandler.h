@@ -31,6 +31,9 @@ private:
     std::string _host;
     std::string _port;
     std::string _groupTarget;
+    bool _enableSay;
+    bool _enableParty;
+    bool _enableSpecGear;
     boost::asio::io_context ioc;
     boost::thread_group threadPool;
     boost::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> work_guard;

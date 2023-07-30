@@ -102,6 +102,7 @@ public:
 void BotChatHandler::handlePartyMessage(const std::string& message, Group& group)
 {
     if (message.find(_itemlinkToken) != std::string::npos) {
+        if (!_enableSpecGear) return;
         parseResult parseResult = parseItemLink(message);
         for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
         {
@@ -190,19 +191,25 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
 
 void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots, uint64 leaderId)
 {
-    std::string target = _groupTarget + std::to_string(leaderId); //should be player id really
+    std::string target = _groupTarget + std::to_string(leaderId);
     std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, botMap=bots](http::response<http::string_body> res) {
         if (res.result_int() != 200) return;
 
         json replies = json::parse(res.body());
         for (auto const& rep : replies["replies"]) {
+
             auto it = botMap.find(rep["speaker"]);
             if (it == botMap.end()) {
-                // Key not found
                 continue;
             }
+
             const bot_ai* speaker = it->second;
-            speaker->BotTellParty(rep["message"], nullptr);
+            if (_enableParty) {
+                speaker->BotTellParty(rep["message"]);
+            }
+            else if (_enableSay) {
+                speaker->BotSay(rep["message"]);
+            }            
         }
     });
 }
@@ -291,6 +298,9 @@ void BotChatHandler::start() {
 void BotChatHandler::loadConfig()
 {
     _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
+    _enableSpecGear = sConfigMgr->GetBoolDefault("NpcBot.SpecGear.Enable", true);
+    _enableSay = sConfigMgr->GetBoolDefault("NpcBot.Chat.Say", false);
+    _enableParty = sConfigMgr->GetBoolDefault("NpcBot.Chat.Party", true);
     _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
     _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
     _groupTarget = "/group/";
