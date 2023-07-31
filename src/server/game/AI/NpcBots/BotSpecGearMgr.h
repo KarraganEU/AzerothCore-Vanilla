@@ -30,22 +30,25 @@ enum BotMultiSpec : uint8 {
 
 class BotSpecGearMgr
 {
-	public:
-		float getItemSpecScore(ItemTemplate const* item, uint32 suffixId, uint32 suffixFactor, uint32 spec, uint32 level);
-        float getItemSpecScore(Item const* item, uint32 spec, uint32 botLevel);
-		std::unordered_map<uint32, float> getStatWeights(uint8 spec);
-		static BotSpecGearMgr* instance();
-        //typedef std::pair<ItemTemplate const*, std::pair<uint32, uint32>> parsedItemLink;
-	private:
-		BotSpecGearMgr();
-		//~BotSpecGearMgr();
-        typedef std::unordered_map<uint32, float> StatWeights;
-		std::unordered_map<uint32, StatWeights> _statWeights; //Spec->Stat->Weightvalue
-        typedef int32 ItemStats[BOT_SPEC_STAT_END+1];
-        void addRawItemStats(ItemTemplate const* item, ItemStats istats, uint32 botLevel);
-        void addSpellStatEffects(const ItemTemplate* item, ItemStats istats);
-        void addItemSuffixStats(uint32 suffixId, uint32 sufficFactor, ItemStats istats);
-        void addSocketStats(ItemTemplate const* item, ItemStats istats);
+private:
+    float _baseThreshold;
+public:
+	float getItemSpecScore(ItemTemplate const* item, uint32 suffixId, uint32 suffixFactor, uint32 spec, uint32 level);
+    float getItemSpecScore(Item const* item, uint32 spec, uint32 botLevel);
+    float getThresholdLevel();
+	std::unordered_map<uint32, float> getStatWeights(uint8 spec);
+	static BotSpecGearMgr* instance();
+    //typedef std::pair<ItemTemplate const*, std::pair<uint32, uint32>> parsedItemLink;
+private:
+	BotSpecGearMgr();
+	//~BotSpecGearMgr();
+    typedef std::unordered_map<uint32, float> StatWeights;
+	std::unordered_map<uint32, StatWeights> _statWeights; //Spec->Stat->Weightvalue
+    typedef int32 ItemStats[BOT_SPEC_STAT_END+1];
+    void addRawItemStats(ItemTemplate const* item, ItemStats istats, uint32 botLevel);
+    void addSpellStatEffects(const ItemTemplate* item, ItemStats istats);
+    void addItemSuffixStats(uint32 suffixId, uint32 sufficFactor, ItemStats istats);
+    void addSocketStats(ItemTemplate const* item, ItemStats istats);
 };
 
 #define sBotSpecGearMgr BotSpecGearMgr::instance()

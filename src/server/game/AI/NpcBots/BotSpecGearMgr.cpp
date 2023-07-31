@@ -1,6 +1,7 @@
 #include "BotSpecGearMgr.h"
 #include <map>
 #include <DBCStores.h>
+#include <Config.h>
 
 
 void BotSpecGearMgr::addRawItemStats(ItemTemplate const* item, ItemStats istats, uint32 botLevel = 1)
@@ -323,6 +324,11 @@ float BotSpecGearMgr::getItemSpecScore(Item const* item, uint32 spec, uint32 bot
     return getItemSpecScore(item->GetTemplate(), item->GetItemRandomPropertyId(), item->GetItemSuffixFactor(), spec, botLevel);
 }
 
+float BotSpecGearMgr::getThresholdLevel()
+{
+    return _baseThreshold;
+}
+
 float BotSpecGearMgr::getItemSpecScore(ItemTemplate const* item, uint32 suffixid, uint32 suffixFactor, uint32 spec, uint32 botLevel)
 {
     if (!item)
@@ -352,8 +358,12 @@ std::unordered_map<uint32, float> BotSpecGearMgr::getStatWeights(uint8 spec)
     return std::unordered_map<uint32, float>();
 }
 
+
+
 BotSpecGearMgr::BotSpecGearMgr()
 {
+    _baseThreshold = sConfigMgr->GetFloatDefault("NpcBot.SpecGear.Threshold", 0.8);
+
     //init statweight tables
     _statWeights.insert({ BOT_SPEC_WARRIOR_FURY, {
             {BOT_SPEC_STAT_MOD_MSOCKET, 100.0f},

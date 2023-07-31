@@ -19617,7 +19617,7 @@ void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
             uint32 spec = (_botclass == BOT_CLASS_DRUID) && (GetSpec() == BOT_SPEC_DRUID_FERAL) ? (IsTank() ? BOT_SPEC_DRUID_FERAL_BEAR : BOT_SPEC_DRUID_FERAL_CAT) : GetSpec();
 
             float newScore = sBotSpecGearMgr->getItemSpecScore(chatItemTemplate, parseResult.suffixId, parseResult.suffixFactor, spec, me->GetLevel());
-            float threshholdFactor = 0.90f;
+            float thresholdFactor = sBotSpecGearMgr->getThresholdLevel();
             std::vector<std::pair<float, Item const*>> replacedItems = getReplacedItems(chatItemTemplate, relevantSlots, spec);
 
             float oldScore = 0.0f;
@@ -19626,14 +19626,14 @@ void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
                 bool twohandDisparity = (chatItemTemplate->InventoryType == INVTYPE_2HWEAPON) != (replacedItems.at(0).second->GetTemplate()->InventoryType == INVTYPE_2HWEAPON);
                 //adjust Threshhold
                 if (twohandDisparity) {
-                    threshholdFactor *= chatItemTemplate->InventoryType == INVTYPE_2HWEAPON ? 2.0f : 0.5f;
+                    thresholdFactor *= chatItemTemplate->InventoryType == INVTYPE_2HWEAPON ? 2.0f : 0.5f;
                 }
                 for (const auto& replaced : replacedItems) {
                     oldScore += replaced.first;
                 }
             }
 
-            if (newScore * threshholdFactor > oldScore) {
+            if (newScore * thresholdFactor > oldScore) {
                 AnnounceNeed(newScore, replacedItems);
             }
         }
