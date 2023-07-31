@@ -327,6 +327,16 @@ void BotChatHandler::loadConfig()
     _highRand = 1.0f + _randPercentDelay;
 }
 
+bool BotChatHandler::isSayMode()
+{
+    return _enableSay;
+}
+
+bool BotChatHandler::isPartyMode()
+{
+    return _enableParty;
+}
+
 std::string BotChatHandler::getSpecName(uint32 spec)
 {
     switch (spec) {

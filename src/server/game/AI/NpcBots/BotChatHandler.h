@@ -57,6 +57,8 @@ public:
         threadPool.join_all();
     }
 
+    bool isSayMode();
+    bool isPartyMode();
     void queryBotReply(std::string body, std::map<std::string, const bot_ai*>& botMap, uint64 leaderId);
     void handlePartyMessage(const std::string& message, Group& group);
     void setPartyMode(const std::string& mode, uint64 leaderId, ChatHandler* handler);
