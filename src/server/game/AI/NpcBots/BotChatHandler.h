@@ -34,6 +34,13 @@ private:
     bool _enableSay;
     bool _enableParty;
     bool _enableSpecGear;
+
+    uint32 _minBaseDelay;
+    uint32 _perCharDelay;
+    float _randPercentDelay;
+    float _lowRand;
+    float _highRand;
+
     boost::asio::io_context ioc;
     boost::thread_group threadPool;
     boost::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> work_guard;

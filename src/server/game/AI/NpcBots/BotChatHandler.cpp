@@ -17,6 +17,7 @@
 #include <bot_ai.h>
 #include <json.hpp>
 #include <Player.h>
+#include <random>
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -192,15 +193,26 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
 void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots, uint64 leaderId)
 {
     std::string target = _groupTarget + std::to_string(leaderId);
+    static std::default_random_engine rEngine;
+    static std::uniform_real_distribution<> distribution(_lowRand, _highRand);
     std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, botMap=bots](http::response<http::string_body> res) {
         if (res.result_int() != 200) return;
 
         json replies = json::parse(res.body());
+        bool isFirst = true;
+
         for (auto const& rep : replies["replies"]) {
 
             auto it = botMap.find(rep["speaker"]);
             if (it == botMap.end()) {
                 continue;
+            }
+
+            if (!isFirst) {
+                //float randAdjust = _lowRand + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (_highRand - _lowRand)));                
+                uint32 delay = (_minBaseDelay + (rep.dump().length() * _perCharDelay)) * distribution(rEngine);
+                delay = std::max(delay, _minBaseDelay);
+                std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
 
             const bot_ai* speaker = it->second;
@@ -209,7 +221,8 @@ void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const
             }
             else if (_enableSay) {
                 speaker->BotSay(rep["message"]);
-            }            
+            }
+            isFirst = false;
         }
     });
 }
@@ -297,13 +310,21 @@ void BotChatHandler::start() {
 
 void BotChatHandler::loadConfig()
 {
-    _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
     _enableSpecGear = sConfigMgr->GetBoolDefault("NpcBot.SpecGear.Enable", true);
+
+    _groupTarget = "/group/";
+    _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
     _enableSay = sConfigMgr->GetBoolDefault("NpcBot.Chat.Say", false);
     _enableParty = sConfigMgr->GetBoolDefault("NpcBot.Chat.Party", true);
     _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
     _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
-    _groupTarget = "/group/";
+
+    _minBaseDelay = sConfigMgr->GetIntDefault("NpcBot.Chat.Delay.minBase", 750);
+    _perCharDelay = sConfigMgr->GetIntDefault("NpcBot.Chat.Delay.perChar", 20);
+    _randPercentDelay = sConfigMgr->GetFloatDefault("NpcBot.Chat.Delay.randPercent", 0.2);
+
+    _lowRand = 1.0f - _randPercentDelay;
+    _highRand = 1.0f + _randPercentDelay;
 }
 
 std::string BotChatHandler::getSpecName(uint32 spec)
