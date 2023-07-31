@@ -130,7 +130,7 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
     //do proper chat
     if (!_enableChat) return;
 
-    std::map<std::string, const bot_ai*> botMap;
+    std::unordered_map<std::string, const bot_ai*> botMap;
     for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
     {
         Creature const* bot = itr->GetSource();
@@ -190,7 +190,7 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
     return postBody;
 }
 
-void BotChatHandler::queryBotReply(std::string body, std::map<std::string, const bot_ai*>& bots, uint64 leaderId)
+void BotChatHandler::queryBotReply(std::string body, std::unordered_map<std::string, const bot_ai*>& bots, uint64 leaderId)
 {
     std::string target = _groupTarget + std::to_string(leaderId);
     static std::default_random_engine rEngine;

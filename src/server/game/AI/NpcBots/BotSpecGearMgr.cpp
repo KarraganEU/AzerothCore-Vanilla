@@ -344,12 +344,12 @@ float BotSpecGearMgr::getItemSpecScore(ItemTemplate const* item, uint32 suffixid
     return itemScore;
 }
 
-std::map<uint32, float> BotSpecGearMgr::getStatWeights(uint8 spec)
+std::unordered_map<uint32, float> BotSpecGearMgr::getStatWeights(uint8 spec)
 {
     if (auto res = _statWeights.find(spec); res != _statWeights.end()) {
         return res->second;
     }
-    return std::map<uint32, float>();
+    return std::unordered_map<uint32, float>();
 }
 
 BotSpecGearMgr::BotSpecGearMgr()
