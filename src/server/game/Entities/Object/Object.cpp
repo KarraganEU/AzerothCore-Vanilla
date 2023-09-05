@@ -1154,6 +1154,10 @@ void WorldObject::SetPositionDataUpdate()
     // Calls immediately for charmed units
     if (GetTypeId() == TYPEID_UNIT && ToUnit()->IsCharmedOwnedByPlayerOrPlayer())
         UpdatePositionData();
+    //npcbot
+    else if (IsNPCBotOrPet() && ToUnit()->IsControlledByPlayer())
+        UpdatePositionData();
+    //end npcbot
 }
 
 void WorldObject::UpdatePositionData()
@@ -3203,4 +3207,9 @@ bool WorldObject::HasAllowedLooter(ObjectGuid guid) const
 GuidUnorderedSet const& WorldObject::GetAllowedLooters() const
 {
     return _allowedLooters;
+}
+
+void WorldObject::RemoveAllowedLooter(ObjectGuid guid)
+{
+    _allowedLooters.erase(guid);
 }
