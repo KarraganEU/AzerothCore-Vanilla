@@ -34,15 +34,18 @@ const Position OptionalSpawn[] =
 
 ObjectData const creatureData[] =
 {
-    { NPC_ATTUMEN_THE_HUNTSMAN, DATA_ATTUMEN  },
-    { NPC_MIDNIGHT,             DATA_MIDNIGHT },
-    { NPC_DOROTHEE,             DATA_DOROTHEE },
-    { NPC_TITO,                 DATA_TITO     },
-    { NPC_ROAR,                 DATA_ROAR     },
-    { NPC_STRAWMAN,             DATA_STRAWMAN },
-    { NPC_TINHEAD,              DATA_TINHEAD  },
-    { NPC_ROMULO,               DATA_ROMULO   },
-    { NPC_JULIANNE,             DATA_JULIANNE },
+    { NPC_ATTUMEN_THE_HUNTSMAN, DATA_ATTUMEN   },
+    { NPC_MIDNIGHT,             DATA_MIDNIGHT  },
+    { NPC_DOROTHEE,             DATA_DOROTHEE  },
+    { NPC_TITO,                 DATA_TITO      },
+    { NPC_ROAR,                 DATA_ROAR      },
+    { NPC_STRAWMAN,             DATA_STRAWMAN  },
+    { NPC_TINHEAD,              DATA_TINHEAD   },
+    { NPC_ROMULO,               DATA_ROMULO    },
+    { NPC_JULIANNE,             DATA_JULIANNE  },
+    { NPC_NIGHTBANE,            DATA_NIGHTBANE },
+    { NPC_TERESTIAN_ILLHOOF,    DATA_TERESTIAN },
+    { 0,                        0              }
 };
 
 class instance_karazhan : public InstanceMapScript
@@ -119,6 +122,16 @@ public:
                     break;
                 case NPC_ECHO_OF_MEDIVH:
                     _echoOfMedivhGUID = creature->GetGUID();
+                    break;
+                case NPC_FIENDISH_IMP:
+                    if (Creature* terestrian = GetCreature(DATA_TERESTIAN))
+                    {
+                        if (terestrian->AI())
+                        {
+                            terestrian->AI()->JustSummoned(creature);
+                            creature->SetInCombatWithZone();
+                        }
+                    }
                     break;
                 default:
                     break;
@@ -250,7 +263,6 @@ public:
                             piece->NearTeleportTo(x, y, z, o);
                             piece->AI()->DoAction(ACTION_CHESS_PIECE_RESET_ORIENTATION);
                             piece->RemoveUnitFlag(UNIT_FLAG_NOT_SELECTABLE);
-                            piece->RemoveNpcFlag(UNIT_NPC_FLAG_GOSSIP);
                             piece->AI()->Reset();
                         }
                     }

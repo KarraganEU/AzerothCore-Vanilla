@@ -119,6 +119,12 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->AttributesEx3 |= SPELL_ATTR3_ALWAYS_HIT;
     });
 
+    // Has Brewfest Mug
+    ApplySpellFix({ 42533 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->DurationEntry = sSpellDurationStore.LookupEntry(347); // 15 min
+    });
+
     // Elixir of Minor Fortitude
     ApplySpellFix({ 2378 }, [](SpellInfo* spellInfo)
     {
@@ -652,6 +658,14 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->Effects[EFFECT_0].MiscValue = -1;
         spellInfo->SpellFamilyName = SPELLFAMILY_UNK1; // allows stacking
         spellInfo->Effects[EFFECT_1].ApplyAuraName = SPELL_AURA_DUMMY; // just a marker
+    });
+
+    ApplySpellFix({
+        6940, // Hand of Sacrifice
+        64205 // Divine Sacrifice
+        }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->AttributesEx7 |= SPELL_ATTR7_DONT_CAUSE_SPELL_PUSHBACK;
     });
 
     // Seal of Command trigger
@@ -1578,8 +1592,8 @@ void SpellMgr::LoadSpellInfoCorrections()
         spellInfo->ChannelInterruptFlags |= AURA_INTERRUPT_FLAG_MOVE;
     });
 
-    // Debris
-    ApplySpellFix({ 36449 }, [](SpellInfo* spellInfo)
+    // Debris - Debris Visual
+    ApplySpellFix({ 36449, 30632 }, [](SpellInfo* spellInfo)
     {
         spellInfo->Attributes |= SPELL_ATTR0_AURA_IS_DEBUFF;
     });
@@ -1588,12 +1602,6 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 30531 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AttributesEx3 |= SPELL_ATTR3_DOT_STACKING_RULE;
-    });
-
-    // Debris Visual
-    ApplySpellFix({ 30632 }, [](SpellInfo* spellInfo)
-    {
-        spellInfo->Effects[EFFECT_0].TargetB = SpellImplicitTargetInfo(TARGET_DEST_DYNOBJ_ALLY);
     });
 
     // Activate Sunblade Protecto
@@ -4626,6 +4634,12 @@ void SpellMgr::LoadSpellInfoCorrections()
     ApplySpellFix({ 30504 }, [](SpellInfo* spellInfo)
     {
         spellInfo->AuraInterruptFlags |= AURA_INTERRUPT_FLAG_TAKE_DAMAGE;
+    });
+
+    // Torment of the Worgen
+    ApplySpellFix({ 30567 }, [](SpellInfo* spellInfo)
+    {
+        spellInfo->ProcChance = 3;
     });
 
     for (uint32 i = 0; i < GetSpellInfoStoreSize(); ++i)
