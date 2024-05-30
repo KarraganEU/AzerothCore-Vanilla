@@ -20085,15 +20085,37 @@ void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
 *   @param relevantSlots - Equipmentslots in which the bot can wear newItem
 *   @param spec -> spec of the bot
 */
-std::vector<std::pair<float, Item const*>> bot_ai::getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec) {
+std::vector<std::pair<float, Item const*>> bot_ai::getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec) { //TODO consider titan grip see line 11605
     std::vector<std::pair<float, Item const*>> replacedItems;
     for (const uint8& slot : relevantSlots) {
-        if (slot > BOT_SLOT_OFFHAND) {
+        //handle all non-hand slots
+        if (slot > BOT_SLOT_OFFHAND && relevantSlots.size()==1) {
             Item* const current = _equips[slot];
             if (current) {
                 std::pair<float, Item const*> mh(sBotSpecGearMgr->getItemSpecScore(current, spec, me->GetLevel()), current);
                 replacedItems.push_back(mh);
             }
+            return replacedItems;
+        }
+        //rings/trinkets
+        if (slot == BOT_SLOT_FINGER1) {
+            Item* const curRingOne = _equips[BOT_SLOT_FINGER1];
+            std::pair<float, Item const*> ring1(sBotSpecGearMgr->getItemSpecScore(curRingOne, spec, me->GetLevel()), curRingOne);
+            Item* const curRingTwo = _equips[BOT_SLOT_FINGER2];
+            std::pair<float, Item const*> ring2(sBotSpecGearMgr->getItemSpecScore(curRingTwo, spec, me->GetLevel()), curRingTwo);
+            if (curRingOne && curRingTwo) 
+                replacedItems.push_back(ring1.first < ring2.first ? ring1 : ring2);
+                
+            return replacedItems;
+        }
+        if (slot == BOT_SLOT_TRINKET1) {
+            Item* const curTrinkOne = _equips[BOT_SLOT_TRINKET1];
+            std::pair<float, Item const*> trink1(sBotSpecGearMgr->getItemSpecScore(curTrinkOne, spec, me->GetLevel()), curTrinkOne);
+            Item* const curTrinkTwo = _equips[BOT_SLOT_TRINKET2];
+            std::pair<float, Item const*> trink2(sBotSpecGearMgr->getItemSpecScore(curTrinkTwo, spec, me->GetLevel()), curTrinkTwo);
+            if (curTrinkOne && curTrinkTwo)
+                replacedItems.push_back(trink1.first < trink2.first ? trink1 : trink2);
+                
             return replacedItems;
         }
         //WEAPONS
