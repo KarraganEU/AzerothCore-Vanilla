@@ -374,6 +374,10 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                         group = sender->GetGroup();
                     }
                     if (group && sBotChatHandler->isSayMode()) {
+                        //TODO: rewrite. This only works if the player's bot are in the group. This is then, except visually, identical to raidmode
+                        //It perhaps should target all HIRED Bots instead so the 3 modes are functionally distinct.
+                        //This would however be a significant change, since all the underlying botchat functionality relies on the player's group.
+                        //However, Say Mode is also visually cleanest, so perhaps there should be a config, which (hired, party, raid) say mode targets?
                         sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::SAY);
                     }
                 }

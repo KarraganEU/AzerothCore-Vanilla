@@ -20073,7 +20073,7 @@ void bot_ai::handleChatItemLink(BotChatHandler::parseResult& parseResult)
                 }
             }
 
-            if (newScore * thresholdFactor > oldScore) {
+            if (newScore > (oldScore *thresholdFactor)) {
                 AnnounceNeed(newScore, replacedItems);
             }
         }

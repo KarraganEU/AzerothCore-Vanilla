@@ -668,6 +668,7 @@ public:
             { "set",        npcbotSetCommandTable                                                                                   },
             { "chat",       npcbotChatCommandTable                                                                                  },
             { "add",        HandleNpcBotAddCommand,                 rbac::RBAC_PERM_COMMAND_NPCBOT_ADD,                Console::No  },
+            { "addA",       HandleNpcBotAddListCommand,             rbac::RBAC_PERM_COMMAND_NPCBOT_ADD,                Console::No  },
             { "remove",     HandleNpcBotRemoveCommand,              rbac::RBAC_PERM_COMMAND_NPCBOT_REMOVE,             Console::No  },
             { "createnew",  HandleNpcBotCreateNewCommand,           rbac::RBAC_PERM_COMMAND_NPCBOT_CREATENEW,          Console::Yes },
             { "spawn",      HandleNpcBotSpawnCommand,               rbac::RBAC_PERM_COMMAND_NPCBOT_SPAWN,              Console::No  },
@@ -4253,6 +4254,67 @@ public:
         bot->GetBotAI()->ReinitOwner();
 
         if (owner->GetBotMgr()->AddBot(bot) == BOT_ADD_SUCCESS)
+        {
+            handler->PSendSysMessage("%s is now your npcbot", bot->GetName().c_str());
+            return true;
+        }
+
+        handler->SendSysMessage("NpcBot is NOT added for some reason!");
+        handler->SetSentErrorMessage(true);
+        return false;
+    }
+
+    static bool HandleNpcBotAddListCommand(ChatHandler* handler, Optional<std::string> creVal)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        Creature* creature = handler->getSelectedCreature();
+
+        if ((!creature && !creVal) || player->GetMap()->Instanceable())
+        {
+            handler->SendSysMessage(".npcbot adda");
+            handler->SendSysMessage("Hires npcbot. World maps only");
+            handler->SendSysMessage("Syntax: .npcbot adda [#ID]");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        char* charID = creVal ? handler->extractKeyFromLink((char*)creVal->c_str(), "Hcreature_entry") : nullptr;
+        if (!charID && !creature)
+            return false;
+
+        uint32 id = charID ? atoi(charID) : creature->GetEntry();
+
+        CreatureTemplate const* creInfo = sObjectMgr->GetCreatureTemplate(id);
+        if (!creInfo)
+        {
+            handler->PSendSysMessage("creature id %u does not exist!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (!creInfo->IsNPCBot())
+        {
+            handler->PSendSysMessage("creature id %u is not a npcbot!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (!BotDataMgr::SelectNpcBotData(id))
+        {
+            handler->PSendSysMessage("NpcBot %u is not spawned!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+        
+        Creature const* bot = BotDataMgr::FindBot(id);
+        
+        ASSERT(bot);
+        ///
+        ObjectGuid::LowType guidlow = player->GetGUID().GetCounter();
+        BotDataMgr::UpdateNpcBotData(bot->GetEntry(), NPCBOT_UPDATE_OWNER, &guidlow);
+        bot->GetBotAI()->ReinitOwner();
+
+        if (player->GetBotMgr()->AddBot(const_cast<Creature*>(bot)) == BOT_ADD_SUCCESS)
         {
             handler->PSendSysMessage("%s is now your npcbot", bot->GetName().c_str());
             return true;

@@ -100,6 +100,12 @@ public:
     }
 };
 
+//TODO change signature to Player sender, instead of Group group -> then assemble the relevant recipient bots on that and the messagetype instead of the group
+//This allows more flexible behaviour (like hired, but non-grouped bots) and removes duplicate filtering from sub-functions
+//if party or raid -> iterate over the players group (and subgroup)
+//if say -> iterate over the players BotMgr, except perhaps for special config (like sayIsParty)
+//For performance reasons, we could implement a function that checks relevance before assembling the list
+//if no itemlink, no shorthand and _enableChat==false, then we don't need to bother
 void BotChatHandler::handlePartyMessage(const std::string& message, Group& group, BotMessageType type)
 {
     if (message.find(_itemlinkToken) != std::string::npos) {
@@ -108,8 +114,8 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
         for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
         {
             Creature const* bot = itr->GetSource();
-            if (!bot)
-                continue;
+            if (!bot) continue;
+            if (type == BotMessageType::PARTY && bot->GetSubGroup() != bot->GetBotAI()->GetBotOwner()->GetSubGroup()) continue;
             bot->GetBotAI()->handleChatItemLink(parseResult);
         }
         return;
@@ -121,8 +127,8 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
         for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
         {
             Creature const* bot = itr->GetSource();
-            if (!bot)
-                continue;
+            if (!bot) continue;
+            if (type == BotMessageType::PARTY && bot->GetSubGroup() != bot->GetBotAI()->GetBotOwner()->GetSubGroup()) continue;
             bot->GetBotAI()->whisperEquipmentList(nullptr);
         }
         return;
@@ -142,7 +148,6 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
     }
 
     json context = buildGroupContext(message, group, type);
-
     queryBotReply(context.dump(), botMap, group.GetLeaderGUID().GetRawValue(), type);
 }
 
@@ -207,25 +212,22 @@ void BotChatHandler::queryBotReply(std::string body, std::unordered_map<std::str
         for (auto const& rep : replies["replies"]) {
 
             auto it = botMap.find(rep["speaker"]);
-            if (it == botMap.end()) {
-                continue;
-            }
+            if (it == botMap.end()) continue;            
 
-            if (!isFirst) {
-                //float randAdjust = _lowRand + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (_highRand - _lowRand)));                
+            if (!isFirst) {                
                 uint32 delay = (_minBaseDelay + (rep.dump().length() * _perCharDelay)) * distribution(rEngine);
                 delay = std::max(delay, _minBaseDelay);
                 std::this_thread::sleep_for(std::chrono::milliseconds(delay));
             }
 
-            const bot_ai* speaker = it->second;
-            if (chatType == BotMessageType::PARTY && _enableParty) {
+            const bot_ai* speaker = it->second;            
+            if (chatType == BotMessageType::PARTY) {
                 speaker->BotTellParty(rep["message"]);
             }
-            else if (chatType == BotMessageType::SAY && _enableSay) {
+            else if (chatType == BotMessageType::SAY) {
                 speaker->BotSay(rep["message"]);
             }
-            else if (chatType == BotMessageType::RAID && _enableRaid) {                
+            else if (chatType == BotMessageType::RAID) {                
                 speaker->BotTellRaid(it->first + ": " + rep["message"].dump());
             }
             isFirst = false;

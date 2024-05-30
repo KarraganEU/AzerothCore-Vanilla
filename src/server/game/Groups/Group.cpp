@@ -2061,17 +2061,6 @@ void Group::BroadcastPacket(WorldPacket const* packet, bool ignorePlayersInBGRai
     }
 }
 
-//void Group::BroadcastToBots(const std::string& msg)
-//{
-//    for (GroupBotReference* itr = GetFirstBotMember(); itr != nullptr; itr = itr->next())
-//    {
-//        Creature const* bot = itr->GetSource();
-//        if (!bot)
-//            continue;
-//        bot->GetBotAI()->handlePartyMessage(msg);
-//    }
-//}
-
 void Group::BroadcastReadyCheck(WorldPacket const* packet)
 {
     for (GroupReference* itr = GetFirstMember(); itr != nullptr; itr = itr->next())
