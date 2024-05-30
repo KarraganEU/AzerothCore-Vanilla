@@ -100,7 +100,7 @@ public:
     }
 };
 
-void BotChatHandler::handlePartyMessage(const std::string& message, Group& group)
+void BotChatHandler::handlePartyMessage(const std::string& message, Group& group, BotMessageType type)
 {
     if (message.find(_itemlinkToken) != std::string::npos) {
         if (!_enableSpecGear) return;
@@ -128,24 +128,26 @@ void BotChatHandler::handlePartyMessage(const std::string& message, Group& group
         return;
     }
     //do proper chat
-    if (!_enableChat) return;
+    if (!_enableChat) return;    
+    if (message.starts_with(".")) return;
 
     std::unordered_map<std::string, const bot_ai*> botMap;
     for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
     {
         Creature const* bot = itr->GetSource();
-        if (!bot)
-            continue;
+        
+        if (!bot) continue;
+        if (type == BotMessageType::PARTY && bot->GetSubGroup() != bot->GetBotAI()->GetBotOwner()->GetSubGroup()) continue;
         botMap.emplace(bot->GetName(), bot->GetBotAI());
     }
 
-    json context = buildGroupContext(message, group);
+    json context = buildGroupContext(message, group, type);
 
-    queryBotReply(context.dump(), botMap, group.GetLeaderGUID().GetRawValue());
+    queryBotReply(context.dump(), botMap, group.GetLeaderGUID().GetRawValue(), type);
 }
 
 //TODO maybe add caching?
-json BotChatHandler::buildGroupContext(const std::string& message, Group& group) // group "can't" be const, because getLeader is not const and would require extra coding
+json BotChatHandler::buildGroupContext(const std::string& message, Group& group, BotMessageType messageType) // group "can't" be const, because getLeader is not const and would require extra coding
 {
     json postBody;
     postBody["string"] = message;
@@ -173,9 +175,10 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
     //add bot context
     for (const GroupBotReference* itr = group.GetFirstBotMember(); itr != nullptr; itr = itr->next())
     {
-        Creature const* bot = itr->GetSource();
-        if (!bot)
-            continue;
+        Creature const* bot = itr->GetSource();        
+        if (!bot) continue;
+        if (messageType == BotMessageType::PARTY && bot->GetSubGroup() != player->GetSubGroup()) continue;
+
         json botJSON;
         botJSON["name"] = bot->GetName();
         botJSON["level"] = bot->GetLevel();
@@ -190,12 +193,12 @@ json BotChatHandler::buildGroupContext(const std::string& message, Group& group)
     return postBody;
 }
 
-void BotChatHandler::queryBotReply(std::string body, std::unordered_map<std::string, const bot_ai*>& bots, uint64 leaderId)
+void BotChatHandler::queryBotReply(std::string body, std::unordered_map<std::string, const bot_ai*>& bots, uint64 leaderId, BotMessageType type)
 {
     std::string target = _groupTarget + std::to_string(leaderId);
     static std::default_random_engine rEngine;
     static std::uniform_real_distribution<> distribution(_lowRand, _highRand);
-    std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, botMap=bots](http::response<http::string_body> res) {
+    std::make_shared<BotSession>(ioc)->run(_host, _port, target, 0, body, [this, chatType = type, botMap=bots](http::response<http::string_body> res) {
         if (res.result_int() != 200) return;
 
         json replies = json::parse(res.body());
@@ -216,11 +219,14 @@ void BotChatHandler::queryBotReply(std::string body, std::unordered_map<std::str
             }
 
             const bot_ai* speaker = it->second;
-            if (_enableParty) {
+            if (chatType == BotMessageType::PARTY && _enableParty) {
                 speaker->BotTellParty(rep["message"]);
             }
-            else if (_enableSay) {
+            else if (chatType == BotMessageType::SAY && _enableSay) {
                 speaker->BotSay(rep["message"]);
+            }
+            else if (chatType == BotMessageType::RAID && _enableRaid) {                
+                speaker->BotTellRaid(it->first + ": " + rep["message"].dump());
             }
             isFirst = false;
         }
@@ -316,6 +322,7 @@ void BotChatHandler::loadConfig()
     _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
     _enableSay = sConfigMgr->GetBoolDefault("NpcBot.Chat.Say", false);
     _enableParty = sConfigMgr->GetBoolDefault("NpcBot.Chat.Party", true);
+    _enableRaid = sConfigMgr->GetBoolDefault("NpcBot.Chat.Raid", false);
     _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
     _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
 
@@ -335,6 +342,11 @@ bool BotChatHandler::isSayMode()
 bool BotChatHandler::isPartyMode()
 {
     return _enableParty;
+}
+
+bool BotChatHandler::isRaidMode()
+{
+    return _enableRaid;
 }
 
 std::string BotChatHandler::getSpecName(uint32 spec)

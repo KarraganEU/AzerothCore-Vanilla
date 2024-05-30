@@ -374,7 +374,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                         group = sender->GetGroup();
                     }
                     if (group && sBotChatHandler->isSayMode()) {
-                        sBotChatHandler->handlePartyMessage(msg, *group);
+                        sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::SAY);
                     }
                 }
                 else if (type == CHAT_MSG_EMOTE)
@@ -453,9 +453,9 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
-                //npcbot chat
+                //npcbot chat                
                 if (lang != LANG_ADDON && sBotChatHandler->isPartyMode()){
-                    sBotChatHandler->handlePartyMessage(msg, *group);
+                    sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::PARTY);
                 }
                 //npcbot end               
             }
@@ -517,6 +517,11 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
+                //npcbot chat
+                if (lang != LANG_ADDON && sBotChatHandler->isRaidMode()) {
+                    sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::RAID);
+                }
+                //npcbot end
             }
             break;
         case CHAT_MSG_RAID_LEADER:
@@ -540,6 +545,11 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID_LEADER, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
+                //npcbot chat
+                if (lang != LANG_ADDON && sBotChatHandler->isRaidMode()) {
+                    sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::RAID);
+                }
+                //npcbot end
             }
             break;
         case CHAT_MSG_RAID_WARNING:
