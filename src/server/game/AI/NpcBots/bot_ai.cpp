@@ -20169,7 +20169,9 @@ std::vector<uint8>  bot_ai::getEquippableSlots(ItemTemplate const* item) {
 
 void bot_ai::AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems) {
     std::ostringstream msgNewScore;
-    msgNewScore << "I could use this! SpecScore: " << uint32(newItemScore);
+    msgNewScore.setf(std::ios::fixed);
+    msgNewScore.precision(1);
+    msgNewScore << "I could use this! SpecScore: " << newItemScore;
     BotWhisper(msgNewScore.str(), master);
 
     if (!oldItems.size())
@@ -20178,12 +20180,14 @@ void bot_ai::AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item 
     std::ostringstream msgOldItem;
     msgOldItem << "Replaced Item(s): ";
     std::ostringstream msgOldScore;
+    msgOldScore.setf(std::ios::fixed);
+    msgOldScore.precision(1);
     msgOldScore << "Old SpecScore: ";
 
     for (const auto& replaced : oldItems) {
         _AddItemLink(master, replaced.second, msgOldItem/*, false*/);
         msgOldItem << " ";
-        msgOldScore << uint32(replaced.first) << " ";
+        msgOldScore << replaced.first << " ";
     }
     BotWhisper(msgOldScore.str(), master);
     BotWhisper(msgOldItem.str(), master);
