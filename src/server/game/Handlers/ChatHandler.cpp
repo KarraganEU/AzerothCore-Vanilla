@@ -40,6 +40,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "BotChatHandler.h"
 
 inline bool isNasty(uint8 c)
 {
@@ -365,8 +366,17 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                     return;
                 }
 
-                if (type == CHAT_MSG_SAY)
+                if (type == CHAT_MSG_SAY) {
                     sender->Say(msg, Language(lang));
+                    Group* group = GetPlayer()->GetOriginalGroup();
+                    if (!group)
+                    {
+                        group = sender->GetGroup();
+                    }
+                    if (group && sBotChatHandler->isSayMode()) {
+                        sBotChatHandler->handlePartyMessage(msg, *group);
+                    }
+                }
                 else if (type == CHAT_MSG_EMOTE)
                     sender->TextEmote(msg);
                 else if (type == CHAT_MSG_YELL)
@@ -443,6 +453,11 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
+                //npcbot chat
+                if (lang != LANG_ADDON && sBotChatHandler->isPartyMode()){
+                    sBotChatHandler->handlePartyMessage(msg, *group);
+                }
+                //npcbot end               
             }
             break;
         case CHAT_MSG_GUILD:
