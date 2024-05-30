@@ -8,6 +8,7 @@
 #include "GroupReference.h"
 //#include "ItemDefines.h"
 #include "Position.h"
+#include "BotChatHandler.h"
 
 #include <tuple>
 #include <unordered_set>
@@ -95,6 +96,7 @@ class bot_ai : public CreatureAI
 
         bool OnGossipHello(Player* player, uint32 option);
         bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action);
+        void whisperEquipmentList(Player* player);
         bool OnGossipSelectCode(Player* player, Creature* creature, uint32 sender, uint32 action, char const* code);
 
         Creature* GetBotsPet() const { return botPet; }
@@ -351,6 +353,14 @@ class bot_ai : public CreatureAI
         void UpdateContestedPvP();
 
         static bool IsFlagCarrier(Unit const* unit, BattlegroundTypeId bgTypeId = BATTLEGROUND_TYPE_NONE);
+        void BotSay(std::string&& text, Player const* target = nullptr) const;
+        //BOTCHAT
+        bool CanEquipItem(ItemTemplate const* item,bool ignoreEquippedMainhand, bool ignoreLevelRequirement);
+        void handleChatItemLink(BotChatHandler::parseResult& parseResult);
+        std::vector<std::pair<float, Item const*>> getReplacedItems(ItemTemplate const* newItem, std::vector<uint8>& relevantSlots, uint32 spec);
+        std::vector<uint8> getEquippableSlots(ItemTemplate const* item);
+        void BotTellParty(const std::string& text) const;
+        void AnnounceNeed(float newItemScore, std::vector<std::pair<float, Item const*>> oldItems);
 
     protected:
         explicit bot_ai(Creature* creature);
@@ -512,8 +522,7 @@ class bot_ai : public CreatureAI
 
         void BotSay(const std::string &text, Player const* target = nullptr) const;
         void BotWhisper(const std::string &text, Player const* target = nullptr) const;
-        void BotYell(const std::string &text, Player const* target = nullptr) const;
-        void BotSay(std::string&& text, Player const* target = nullptr) const;
+        void BotYell(const std::string &text, Player const* target = nullptr) const;        
         void BotWhisper(std::string&& text, Player const* target = nullptr) const;
         void BotYell(std::string&& text, Player const* target = nullptr) const;
 
@@ -621,11 +630,15 @@ class bot_ai : public CreatureAI
         void _autoLootCreatureItems(Player* receiver, Creature* creature, uint32 lootQualityMask, uint32 lootThreshold) const;
         void _autoLootCreature(Creature* creature);
 
-        bool _canUseOffHand() const;
+        bool _canUseOffHand(bool ignoreEquippedMH=false) const;
         bool _canUseRanged() const;
         bool _canUseRelic() const;
+
         bool _canEquip(ItemTemplate const* newProto, uint8 slot, bool ignoreItemLevel, Item const* newItem = nullptr) const;
         void _removeEquipment(uint8 slot);
+
+        bool _canEquip(ItemTemplate const* newProto, uint8 slot, bool ignoreItemLevel, Item const* newItem = nullptr, bool ignoreEquippedMainhand = false) const;
+
         bool _unequip(uint8 slot, ObjectGuid receiver);
         bool _equip(uint8 slot, Item* newItem, ObjectGuid receiver);
         bool _resetEquipment(uint8 slot, ObjectGuid receiver);
@@ -645,7 +658,7 @@ class bot_ai : public CreatureAI
 
         //utilities
         void _AddItemTemplateLink(Player const* forPlayer, ItemTemplate const* item, std::ostringstream &str) const;
-        void _AddItemLink(Player const* forPlayer, Item const* item, std::ostringstream &str, bool addIcon = true) const;
+        void _AddItemLink(Player const* forPlayer, Item const* item, std::ostringstream &str, bool addIcon = true) const;        
         void _AddQuestLink(Player const* forPlayer, Quest const* quest, std::ostringstream &str) const;
         void _AddWeaponSkillLink(Player const* forPlayer, SpellInfo const* spellInfo, std::ostringstream &str, uint32 skillid) const;
         void _AddSpellLink(Player const* forPlayer, SpellInfo const* spellInfo, std::ostringstream &str, bool color = true) const;
@@ -753,10 +766,9 @@ class bot_ai : public CreatureAI
             bool enabled;
         };
 
-        typedef int32 ItemStatBonus[MAX_BOT_ITEM_MOD];
+        typedef int32 ItemStatBonus[MAX_BOT_ITEM_MOD];        
         ItemStatBonus _stats[BOT_INVENTORY_SIZE];
         Item* _equips[BOT_INVENTORY_SIZE];
-
     public:
         typedef std::unordered_map<uint32 /*firstrankspellid*/, BotSpell* /*spell*/> BotSpellMap;
         BotSpellMap const& GetSpellMap() const { return _spells; }
@@ -810,3 +822,5 @@ class bot_ai : public CreatureAI
 };
 
 #endif
+
+
