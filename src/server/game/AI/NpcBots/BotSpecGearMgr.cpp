@@ -208,7 +208,29 @@ void BotSpecGearMgr::addSpellStatEffects(const ItemTemplate* item, ItemStats ist
             for (uint8 j = 0; j < MAX_SPELL_EFFECTS; j++) {
                 //+1 because the basepoints in the spelldbc, which are read here, are for some reason 1 lower than the actual modifier
                 if (spell->EffectApplyAuraName[j] == 13) { // 13 -> Spell applies Aura that modifies spell power
-                    istats[BOT_STAT_MOD_SPELL_POWER] += spell->EffectBasePoints[j] + 1;
+                    uint8 school = spell->EffectMiscValue[j];
+                    uint8 modPoints = spell->EffectBasePoints[j] + 1;
+
+                    switch (school) {
+                    case SPELL_SCHOOL_MASK_NORMAL:
+                        istats[BOT_STAT_MOD_SPELL_POWER] += modPoints;
+                        break;
+                    case SPELL_SCHOOL_MASK_ARCANE:
+                        istats[BOT_SPEC_STAT_MOD_ARCANE_SP] += modPoints;
+                        break;
+                    case SPELL_SCHOOL_MASK_FIRE:
+                        istats[BOT_SPEC_STAT_MOD_FIRE_SP] += modPoints;
+                        break;
+                    case SPELL_SCHOOL_MASK_FROST:
+                        istats[BOT_SPEC_STAT_MOD_FROST_SP] += modPoints;
+                        break;
+                    case SPELL_SCHOOL_MASK_NATURE:
+                        istats[BOT_SPEC_STAT_MOD_NATURE_SP] += modPoints;
+                        break;
+                    case SPELL_SCHOOL_MASK_SHADOW:
+                        istats[BOT_SPEC_STAT_MOD_SHADOW_SP] += modPoints;
+                        break;
+                    }
                 }
                 if (spell->EffectApplyAuraName[j] == 99) { // 99 -> mod attack power
                     istats[BOT_STAT_MOD_ATTACK_POWER] += spell->EffectBasePoints[j] + 1;
