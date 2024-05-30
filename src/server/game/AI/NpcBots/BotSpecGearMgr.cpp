@@ -369,6 +369,16 @@ float BotSpecGearMgr::getItemSpecScore(ItemTemplate const* item, uint32 suffixid
     for (auto const& [stat, weight] : weights) {
         itemScore += stats[stat] * weight;
     }
+    //"vanilla adjustment": the provided stat weights are (mostly) focused on throughput and contain many stats that are simply not available in (pre-raid) vanilla content while stats that are not important or that are somewhat incidental are not listed
+    //these are mostly stamina and spirit; while they are not a (big) focus in wotlk raid content, they can still constitute an upgrade, especially pre-60
+    //e.g an item with 20 stam and 15 spirit should still be considered an upgrade for a holy paladin that is currently wearing a 1 int piece (or even nothing at all in that slot)
+    if (weights.find(BOT_STAT_MOD_STAMINA) == weights.end()) {
+        itemScore += stats[BOT_STAT_MOD_STAMINA] * 0.3f; //TODO: what value is appropriate here?
+    }
+
+    if (spec == BOT_SPEC_PALADIN_HOLY || spec == BOT_SPEC_DRUID_RESTORATION || spec == BOT_SPEC_SHAMAN_RESTORATION) itemScore += stats[BOT_STAT_MOD_SPIRIT] * 0.275f;//priest already contains spirit weights
+    else itemScore += stats[BOT_STAT_MOD_SPIRIT] * 0.05f;
+
     return itemScore;
 }
 
