@@ -32,6 +32,8 @@ class BotSpecGearMgr
 {
 private:
     float _baseThreshold;
+    bool  _normalizeScores;
+    float _normalizeTarget;
 public:
 	float getItemSpecScore(ItemTemplate const* item, uint32 suffixId, uint32 suffixFactor, uint32 spec, uint32 level);
     float getItemSpecScore(Item const* item, uint32 spec, uint32 botLevel);

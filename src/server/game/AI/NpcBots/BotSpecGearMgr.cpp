@@ -395,6 +395,8 @@ std::unordered_map<uint32, float> BotSpecGearMgr::getStatWeights(uint8 spec)
 BotSpecGearMgr::BotSpecGearMgr()
 {
     _baseThreshold = sConfigMgr->GetFloatDefault("NpcBot.SpecGear.Threshold", 0.8);
+    _normalizeScores = sConfigMgr->GetBoolDefault("NpcBot.SpecGear.Normalize", true);
+    _normalizeTarget = sConfigMgr->GetFloatDefault("NpcBot.SpecGear.NormalizeTarget", 300); //With the large weight some singular stats have (like meta sockets), normalizing to 1 would result in tiny scores for early game items. This allows to adjust that baseline level
 
     //init statweight tables
     _statWeights.insert({ BOT_SPEC_WARRIOR_FURY, {
@@ -846,4 +848,19 @@ BotSpecGearMgr::BotSpecGearMgr()
             {BOT_STAT_MOD_DEFENSE_SKILL_RATING, 0.232f},
             {BOT_STAT_MOD_RESILIENCE_RATING, 0.116f}}
         });
+
+    if (_normalizeScores) {
+        for (auto& weightMap : _statWeights) {
+            // Calculate the sum of values in the nested weightMap map
+            float total = 0.0f;
+            for (const auto& entry : weightMap.second) {
+                total += entry.second;
+            }            
+
+            // Normalize values by dividing each value by the total sum and adjust to desired normalTarget
+            for (auto& entry : weightMap.second) {
+                entry.second = (entry.second/total) * _normalizeTarget;
+            }
+        }
+    }
 }
