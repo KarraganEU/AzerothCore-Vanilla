@@ -20171,7 +20171,17 @@ void bot_ai::BotTellParty(const std::string& text) const
 {
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_MONSTER_PARTY, LANG_UNIVERSAL, me, nullptr, text);
-    me->GetBotGroup()->BroadcastPacket(&data, false, 0, me->GetGUID());
+    me->GetBotGroup()->BroadcastPacket(&data, false, me->GetSubGroup(), me->GetGUID());
+}
+
+void bot_ai::BotTellRaid(const std::string& text) const
+{
+    Group* group = me->GetBotGroup();
+    if (!group || !group->isRaidGroup()) return;
+
+    WorldPacket data;
+    ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID, LANG_UNIVERSAL, me, nullptr, text);
+    group->BroadcastPacket(&data, false, -1, me->GetGUID());
 }
 
 #ifdef _MSC_VER

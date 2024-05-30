@@ -22,6 +22,12 @@ namespace net = boost::asio;
 using tcp = net::ip::tcp;
 using json = nlohmann::json;
 
+enum BotMessageType : uint8 {
+    SAY,
+    PARTY,
+    RAID
+};
+
 class BotChatHandler
 {
 public:
@@ -33,6 +39,7 @@ private:
     std::string _groupTarget;
     bool _enableSay;
     bool _enableParty;
+    bool _enableRaid;
     bool _enableSpecGear;
 
     uint32 _minBaseDelay;
@@ -59,11 +66,12 @@ public:
 
     bool isSayMode();
     bool isPartyMode();
-    void queryBotReply(std::string body, std::unordered_map<std::string, const bot_ai*>& botMap, uint64 leaderId);
-    void handlePartyMessage(const std::string& message, Group& group);
+    bool isRaidMode();
+    void queryBotReply(std::string body, std::unordered_map<std::string, const bot_ai*>& botMap, uint64 leaderId, BotMessageType type);
+    void handlePartyMessage(const std::string& message, Group& group, BotMessageType type);
     void setPartyMode(const std::string& mode, uint64 leaderId, ChatHandler* handler);
     void eraseHistory(uint64 leaderId, ChatHandler* handler);
-    json buildGroupContext(const std::string& message, Group& group);
+    json buildGroupContext(const std::string& message, Group& group, BotMessageType type);
     struct parseResult {
         ItemTemplate const* proto = 0;
         uint32 suffixId = 0;
