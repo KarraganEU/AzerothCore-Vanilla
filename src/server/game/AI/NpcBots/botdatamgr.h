@@ -233,6 +233,7 @@ class BotDataMgr
 
         static bool AllBotsLoaded();
 
+        static const ObjectGuid* GetFakeGuid(Object const* bot);
         static void RegisterBot(Creature const* bot);
         static void UnregisterBot(Creature const* bot);
         static Creature const* FindBot(uint32 entry);

@@ -40,6 +40,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "BotChatHandler.h"
 
 inline bool isNasty(uint8 c)
 {
@@ -365,15 +366,28 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                     return;
                 }
 
-                if (type == CHAT_MSG_SAY)
+                if (type == CHAT_MSG_SAY) {
                     sender->Say(msg, Language(lang));
+                    Group* group = GetPlayer()->GetOriginalGroup();
+                    if (!group)
+                    {
+                        group = sender->GetGroup();
+                    }
+                    if (group && sBotChatHandler->isSayMode()) {
+                        //TODO: rewrite. This only works if the player's bot are in the group. This is then, except visually, identical to raidmode
+                        //It perhaps should target all HIRED Bots instead so the 3 modes are functionally distinct.
+                        //This would however be a significant change, since all the underlying botchat functionality relies on the player's group.
+                        //However, Say Mode is also visually cleanest, so perhaps there should be a config, which (hired, party, raid) say mode targets?
+                        sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::SAY);
+                    }
+                }
                 else if (type == CHAT_MSG_EMOTE)
                     sender->TextEmote(msg);
                 else if (type == CHAT_MSG_YELL)
                     sender->Yell(msg, Language(lang));
             }
             break;
-        case CHAT_MSG_WHISPER:
+        case CHAT_MSG_WHISPER: //TODO handle Whisper with bots; receiver is Player? if no check if bot. is this where non monster whisper from player falls apart? nme query should be fine
             {
                 if (!normalizePlayerName(to))
                 {
@@ -390,7 +404,8 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                     ChatHandler(this).SendNotification(LANG_WHISPER_REQ, sWorld->getIntConfig(CONFIG_CHAT_WHISPER_LEVEL_REQ));
                     return;
                 }
-
+                //TODO if !receiver, check if a bot, we need to get it here and then just handle the message on the bot
+                //for player -> receiver maybe it helps if we only allow to bots owned by player
                 if (!receiver || (senderIsPlayer && !receiverIsPlayer && !receiver->isAcceptWhispers() && !receiver->IsInWhisperWhiteList(sender->GetGUID())))
                 {
                     SendPlayerNotFoundNotice(to);
@@ -415,7 +430,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 if (!senderIsPlayer && !sender->isAcceptWhispers() && !sender->IsInWhisperWhiteList(receiver->GetGUID()))
                     sender->AddWhisperWhiteList(receiver->GetGUID());
 
-                GetPlayer()->Whisper(msg, Language(lang), receiver);
+                GetPlayer()->Whisper(msg, Language(lang), receiver); //TODO take inspiration from here for whispers FROM bots?
             }
             break;
         case CHAT_MSG_PARTY:
@@ -443,6 +458,11 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, ChatMsg(type), Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false, group->GetMemberGroup(GetPlayer()->GetGUID()));
+                //npcbot chat                
+                if (lang != LANG_ADDON && sBotChatHandler->isPartyMode()){
+                    sBotChatHandler->handlePartyMessage(    msg, *group, BotMessageType::PARTY);
+                }
+                //npcbot end               
             }
             break;
         case CHAT_MSG_GUILD:
@@ -502,6 +522,11 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
+                //npcbot chat
+                if (lang != LANG_ADDON && sBotChatHandler->isRaidMode()) {
+                    sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::RAID);
+                }
+                //npcbot end
             }
             break;
         case CHAT_MSG_RAID_LEADER:
@@ -525,6 +550,11 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket& recvData)
                 WorldPacket data;
                 ChatHandler::BuildChatPacket(data, CHAT_MSG_RAID_LEADER, Language(lang), sender, nullptr, msg);
                 group->BroadcastPacket(&data, false);
+                //npcbot chat
+                if (lang != LANG_ADDON && sBotChatHandler->isRaidMode()) {
+                    sBotChatHandler->handlePartyMessage(msg, *group, BotMessageType::RAID);
+                }
+                //npcbot end
             }
             break;
         case CHAT_MSG_RAID_WARNING:

@@ -430,6 +430,8 @@ public:
     //void SendTestCreatureQueryOpcode(uint32 entry, ObjectGuid guid, uint32 testvalue);
     void SendNameQueryOpcode(ObjectGuid guid);
 
+    bool QueryForBotData(const uint32& creatureId, ObjectGuid& guid);
+
     void SendTrainerList(ObjectGuid guid);
     void SendTrainerList(ObjectGuid guid, std::string const& strTitle);
     void SendListInventory(ObjectGuid guid, uint32 vendorEntry = 0);

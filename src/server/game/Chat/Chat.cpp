@@ -30,6 +30,7 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+#include "botdatamgr.h"
 #include "WorldSessionMgr.h"
 #include <boost/algorithm/string/replace.hpp>
 
@@ -354,6 +355,11 @@ std::size_t ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg chatType, La
     if (sender)
     {
         senderGUID = sender->GetGUID();
+        //npcbot real whisper
+        if (senderGUID.IsCreature() && chatType == CHAT_MSG_WHISPER) {                                   
+            senderGUID = *(BotDataMgr::GetFakeGuid(sender));
+        }
+        //npcbot real whisper end
         senderName = sender->GetNameForLocaleIdx(locale);
         if (Player const* playerSender = sender->ToPlayer())
         {
@@ -365,6 +371,11 @@ std::size_t ChatHandler::BuildChatPacket(WorldPacket& data, ChatMsg chatType, La
     if (receiver)
     {
         receiverGUID = receiver->GetGUID();
+        //npcbot real whisper
+        if (receiverGUID.IsCreature() && chatType == CHAT_MSG_WHISPER) {            
+            receiverGUID = *(BotDataMgr::GetFakeGuid(receiver));
+        }
+        //npcbot real whisper end
         receiverName = receiver->GetNameForLocaleIdx(locale);
     }
 

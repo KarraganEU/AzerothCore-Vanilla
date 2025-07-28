@@ -9584,7 +9584,7 @@ void Player::Whisper(std::string_view text, Language language, Player* target, b
 
     WorldPacket data;
     ChatHandler::BuildChatPacket(data, CHAT_MSG_WHISPER, language, this, this, _text);
-    target->GetSession()->SendPacket(&data);
+    target->GetSession()->SendPacket(&data); //TODO this should be equivalent to the sendDirect message used in bot whisper
 
     // rest stuff shouldn't happen in case of addon message
     if (isAddonMessage)

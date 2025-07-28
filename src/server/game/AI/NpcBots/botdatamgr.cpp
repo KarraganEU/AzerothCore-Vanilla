@@ -44,6 +44,7 @@ typedef std::unordered_map<ObjectGuid /*player_guid*/, NpcBotMgrData*> NpcBotMgr
 NpcBotMgrDataMap _botMgrsData;
 
 typedef std::unordered_map<uint32 /*entry*/, NpcBotData*> NpcBotDataMap;
+typedef std::unordered_map<uint32 /*entry*/, ObjectGuid> NpcBotFakePlayerGuidMap;
 typedef std::unordered_map<uint32 /*entry*/, NpcBotAppearanceData*> NpcBotAppearanceDataMap;
 typedef std::unordered_map<uint32 /*entry*/, NpcBotExtras*> NpcBotExtrasMap;
 typedef std::unordered_map<uint32 /*entry*/, NpcBotTransmogData*> NpcBotTransmogDataMap;
@@ -52,6 +53,7 @@ NpcBotAppearanceDataMap _botsAppearanceData;
 NpcBotExtrasMap _botsExtras;
 NpcBotTransmogDataMap _botsTransmogData;
 NpcBotRegistry _existingBots;
+NpcBotFakePlayerGuidMap _cachedFakeIds;
 
 std::map<uint32, uint8> _wpMinSpawnLevelPerMapId;
 std::map<uint32, uint8> _wpMaxSpawnLevelPerMapId;
@@ -2999,6 +3001,19 @@ void BotDataMgr::RegisterBot(Creature const* bot)
     _existingBots.insert(bot);
     //BOT_LOG_ERROR("entities.unit", "BotDataMgr::RegisterBot: registered bot %u (%s)", bot->GetEntry(), bot->GetName().c_str());
 }
+
+const ObjectGuid* BotDataMgr::GetFakeGuid(Object const* bot)
+{    
+    uint32 entry = bot->GetGUID().GetEntry();
+    if (!entry) {
+        LOG_ERROR("entities.unit", "BotDataMgr::GetFakeGuid: Object did not have valid Entry");
+        return nullptr;
+    }
+    std::unique_lock<std::shared_mutex> lock(*GetLock());
+    auto [itr, inserted] = _cachedFakeIds.try_emplace(entry, HighGuid::Player, entry);
+    return &(itr->second);
+}
+
 void BotDataMgr::UnregisterBot(Creature const* bot)
 {
     if (_existingBots.find(bot) == _existingBots.end())

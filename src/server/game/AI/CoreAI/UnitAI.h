@@ -78,7 +78,7 @@ struct DefaultTargetSelector : public Acore::unary_function<Unit*, bool>
 
         if (m_playerOnly && (!target->IsPlayer()))
             //npcbot: allow to target bots
-            //if (!(target->IsNPCBot()))
+            //if (!(target->IsNPCBot())) //TODO KARRAGAN: this is for example for sapphiron, who selects targets randomly but onlyPlayer predicate is true
             //end npcbot
             return false;
 

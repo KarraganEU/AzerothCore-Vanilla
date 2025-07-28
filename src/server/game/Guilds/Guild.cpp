@@ -1220,7 +1220,7 @@ void Guild::HandleRoster(WorldSession* session)
 
     bool sendOfficerNote = _HasRankRight(session->GetPlayer(), GR_RIGHT_VIEWOFFNOTE);
     roster.MemberData.reserve(m_members.size());
-    for (auto const& [guid, member] : m_members)
+    for (auto const& [guid, member] : m_members) //TODO here we get all Members -> Bots
     {
         WorldPackets::Guild::GuildRosterMemberData& memberData = roster.MemberData.emplace_back();
 

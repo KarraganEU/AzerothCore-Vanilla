@@ -19,6 +19,7 @@
 #include "AreaDefines.h"
 #include "Battleground.h"
 #include "BattlegroundMgr.h"
+#include "bot_ai.h"
 #include "Config.h"
 #include "DatabaseEnv.h"
 #include "GameTime.h"

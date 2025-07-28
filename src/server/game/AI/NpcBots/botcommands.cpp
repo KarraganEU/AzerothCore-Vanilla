@@ -92,7 +92,9 @@ enum rbac
     RBAC_PERM_COMMAND_NPCBOT_SPAWNED                         = SEC_GAMEMASTER,
     RBAC_PERM_COMMAND_NPCBOT_COMMAND_MISC                    = SEC_PLAYER,
     RBAC_PERM_COMMAND_NPCBOT_CREATENEW                       = SEC_ADMINISTRATOR,
-    RBAC_PERM_COMMAND_NPCBOT_SEND                            = SEC_PLAYER
+    RBAC_PERM_COMMAND_NPCBOT_SEND                            = SEC_PLAYER,
+    RBAC_PERM_COMMAND_NPCBOT_CHAT_MODE                       = SEC_PLAYER,
+    RBAC_PERM_COMMAND_NPCBOT_CHAT_ERASE                      = SEC_PLAYER
 };
 //end Acore only
 #endif
@@ -667,12 +669,22 @@ public:
             { "item",       HandleNpcBotUseOnBotItemCommand,        rbac::RBAC_PERM_COMMAND_NPCBOT_COMMAND_MISC,       Console::No  },
         };
 
+        //BOTCHAT
+        static ChatCommandTable npcbotChatCommandTable =
+        {
+            { "mode",    HandleNpcBotChatSetModeCommand,            rbac::RBAC_PERM_COMMAND_NPCBOT_CHAT_MODE,          Console::No  },
+            { "delete",  HandleNpcBotChatDeleteHistoryCommand,      rbac::RBAC_PERM_COMMAND_NPCBOT_CHAT_ERASE,         Console::No  },
+        };
+        //BOTCHAT END
+
         static ChatCommandTable npcbotCommandTable =
         {
             //{ "debug",      npcbotDebugCommandTable                                                                                 },
             //{ "toggle",     npcbotToggleCommandTable                                                                                },
             { "set",        npcbotSetCommandTable                                                                                   },
+            { "chat",       npcbotChatCommandTable                                                                                  },
             { "add",        HandleNpcBotAddCommand,                 rbac::RBAC_PERM_COMMAND_NPCBOT_ADD,                Console::No  },
+            { "addA",       HandleNpcBotAddListCommand,             rbac::RBAC_PERM_COMMAND_NPCBOT_ADD,                Console::No  },
             { "remove",     HandleNpcBotRemoveCommand,              rbac::RBAC_PERM_COMMAND_NPCBOT_REMOVE,             Console::No  },
             { "free",       HandleNpcBotFreeCommand,                rbac::RBAC_PERM_COMMAND_NPCBOT_REMOVE,             Console::No  },
             { "createnew",  HandleNpcBotCreateNewCommand,           rbac::RBAC_PERM_COMMAND_NPCBOT_CREATENEW,          Console::Yes },
@@ -4891,6 +4903,67 @@ public:
         return false;
     }
 
+    static bool HandleNpcBotAddListCommand(ChatHandler* handler, Optional<std::string> creVal)
+    {
+        Player* player = handler->GetSession()->GetPlayer();
+        Creature* creature = handler->getSelectedCreature();
+
+        if ((!creature && !creVal) || player->GetMap()->Instanceable())
+        {
+            handler->SendSysMessage(".npcbot adda");
+            handler->SendSysMessage("Hires npcbot. World maps only");
+            handler->SendSysMessage("Syntax: .npcbot adda [#ID]");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        char* charID = creVal ? handler->extractKeyFromLink((char*)creVal->c_str(), "Hcreature_entry") : nullptr;
+        if (!charID && !creature)
+            return false;
+
+        uint32 id = charID ? atoi(charID) : creature->GetEntry();
+
+        CreatureTemplate const* creInfo = sObjectMgr->GetCreatureTemplate(id);
+        if (!creInfo)
+        {
+            handler->PSendSysMessage("creature id %u does not exist!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (!creInfo->IsNPCBot())
+        {
+            handler->PSendSysMessage("creature id %u is not a npcbot!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+
+        if (!BotDataMgr::SelectNpcBotData(id))
+        {
+            handler->PSendSysMessage("NpcBot %u is not spawned!", id);
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
+        
+        Creature const* bot = BotDataMgr::FindBot(id);
+        
+        ASSERT(bot);
+        ///
+        ObjectGuid::LowType guidlow = player->GetGUID().GetCounter();
+        BotDataMgr::UpdateNpcBotData(bot->GetEntry(), NPCBOT_UPDATE_OWNER, &guidlow);
+        bot->GetBotAI()->ReinitOwner();
+
+        if (player->GetBotMgr()->AddBot(const_cast<Creature*>(bot)) == BOT_ADD_SUCCESS)
+        {
+            handler->PSendSysMessage("%s is now your npcbot", bot->GetName().c_str());
+            return true;
+        }
+
+        handler->SendSysMessage("NpcBot is NOT added for some reason!");
+        handler->SetSentErrorMessage(true);
+        return false;
+    }
+
     static bool HandleNpcBotReloadConfigCommand(ChatHandler* handler)
     {
         BOT_LOG_INFO("misc", "Re-Loading config settings...");
@@ -4901,6 +4974,25 @@ public:
         handler->SendGlobalGMSysMessage("NpcBot config settings reloaded.");
         return true;
     }
+
+    //BOTCHAT
+    static bool HandleNpcBotChatSetModeCommand(ChatHandler* handler, Optional<std::string> modeString)
+    {
+        Player* chr = handler->GetSession()->GetPlayer();
+        if (!modeString) return false;
+
+        sBotChatHandler->setPartyMode(*modeString, chr->GetGUID().GetRawValue(), handler);
+        return true;
+    }
+
+    static bool HandleNpcBotChatDeleteHistoryCommand(ChatHandler* handler)
+    {
+        Player* chr = handler->GetSession()->GetPlayer();
+
+        sBotChatHandler->eraseHistory(chr->GetGUID().GetRawValue(), handler);
+        return true;
+    }
+    //BOTCHAT END
 };
 
 void AddSC_script_bot_commands()
