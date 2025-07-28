@@ -12415,8 +12415,6 @@ bool bot_ai::_canUseOffHand(ItemTemplate const* with/* = nullptr*/, bool ignore_
     //warrior can wield any offhand with titan's grip
     if (_botclass == BOT_CLASS_WARRIOR && me->GetLevel() >= 60 && GetSpec() == BOT_SPEC_WARRIOR_FURY)
         return true;
-    if (ignoreEquippedMH)
-        return true;
 
     if (ignore_mh)
         return true;

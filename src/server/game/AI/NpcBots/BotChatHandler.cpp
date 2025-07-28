@@ -318,19 +318,19 @@ void BotChatHandler::start() {
 
 void BotChatHandler::loadConfig()
 {
-    _enableSpecGear = sConfigMgr->GetBoolDefault("NpcBot.SpecGear.Enable", true);
+    _enableSpecGear =  sConfigMgr->GetOption<bool>("NpcBot.SpecGear.Enable", true);
 
     _groupTarget = "/group/";
-    _enableChat = sConfigMgr->GetBoolDefault("NpcBot.Chat.Enable", false);
-    _enableSay = sConfigMgr->GetBoolDefault("NpcBot.Chat.Say", false);
-    _enableParty = sConfigMgr->GetBoolDefault("NpcBot.Chat.Party", true);
-    _enableRaid = sConfigMgr->GetBoolDefault("NpcBot.Chat.Raid", false);
-    _host = sConfigMgr->GetStringDefault("NpcBot.Chat.Host", "127.0.0.1");
-    _port = sConfigMgr->GetStringDefault("NpcBot.Chat.Port", "5000");
+    _enableChat =  sConfigMgr->GetOption<bool>("NpcBot.Chat.Enable", false);
+    _enableSay =  sConfigMgr->GetOption<bool>("NpcBot.Chat.Say", false);
+    _enableParty =  sConfigMgr->GetOption<bool>("NpcBot.Chat.Party", true);
+    _enableRaid =  sConfigMgr->GetOption<bool>("NpcBot.Chat.Raid", false);
+    _host = sConfigMgr->GetOption<std::string>("NpcBot.Chat.Host", "127.0.0.1");
+    _port = sConfigMgr->GetOption<std::string>("NpcBot.Chat.Port", "5000");
 
-    _minBaseDelay = sConfigMgr->GetIntDefault("NpcBot.Chat.Delay.minBase", 750);
-    _perCharDelay = sConfigMgr->GetIntDefault("NpcBot.Chat.Delay.perChar", 20);
-    _randPercentDelay = sConfigMgr->GetFloatDefault("NpcBot.Chat.Delay.randPercent", 0.2);
+    _minBaseDelay = sConfigMgr->GetOption<uint16>("NpcBot.Chat.Delay.minBase", 750);
+    _perCharDelay = sConfigMgr->GetOption<uint16>("NpcBot.Chat.Delay.perChar", 20);
+    _randPercentDelay = sConfigMgr->GetOption<float>("NpcBot.Chat.Delay.randPercent", 0.2);
 
     _lowRand = 1.0f - _randPercentDelay;
     _highRand = 1.0f + _randPercentDelay;
